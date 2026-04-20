@@ -1,0 +1,198 @@
+# Event Ticketing System - full local stack
+# Six microservices, six MySQL databases, Prometheus + Grafana
+version: "3.9"
+
+x-mysql-env: &mysql-env
+  MYSQL_ROOT_PASSWORD: rootpass
+
+services:
+  # ---------------- Databases (DB-per-service) ----------------
+  user-db:
+    image: mysql:8.0
+    environment:
+      <<: *mysql-env
+      MYSQL_DATABASE: user_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: pass
+    volumes:
+      - user-db-data:/var/lib/mysql
+      - ./db-init/user:/docker-entrypoint-initdb.d:ro
+    ports: ["33061:3306"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootpass"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  catalog-db:
+    image: mysql:8.0
+    environment:
+      <<: *mysql-env
+      MYSQL_DATABASE: catalog_db
+      MYSQL_USER: catalog
+      MYSQL_PASSWORD: pass
+    volumes:
+      - catalog-db-data:/var/lib/mysql
+      - ./db-init/catalog:/docker-entrypoint-initdb.d:ro
+    ports: ["33062:3306"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootpass"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  seating-db:
+    image: mysql:8.0
+    environment:
+      <<: *mysql-env
+      MYSQL_DATABASE: seating_db
+      MYSQL_USER: seating
+      MYSQL_PASSWORD: pass
+    volumes:
+      - seating-db-data:/var/lib/mysql
+      - ./db-init/seating:/docker-entrypoint-initdb.d:ro
+    ports: ["33063:3306"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootpass"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  order-db:
+    image: mysql:8.0
+    environment:
+      <<: *mysql-env
+      MYSQL_DATABASE: order_db
+      MYSQL_USER: orderusr
+      MYSQL_PASSWORD: pass
+    volumes:
+      - order-db-data:/var/lib/mysql
+      - ./db-init/order:/docker-entrypoint-initdb.d:ro
+    ports: ["33064:3306"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootpass"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  payment-db:
+    image: mysql:8.0
+    environment:
+      <<: *mysql-env
+      MYSQL_DATABASE: payment_db
+      MYSQL_USER: payment
+      MYSQL_PASSWORD: pass
+    volumes:
+      - payment-db-data:/var/lib/mysql
+      - ./db-init/payment:/docker-entrypoint-initdb.d:ro
+    ports: ["33065:3306"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootpass"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  notification-db:
+    image: mysql:8.0
+    environment:
+      <<: *mysql-env
+      MYSQL_DATABASE: notification_db
+      MYSQL_USER: notify
+      MYSQL_PASSWORD: pass
+    volumes:
+      - notification-db-data:/var/lib/mysql
+      - ./db-init/notification:/docker-entrypoint-initdb.d:ro
+    ports: ["33066:3306"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootpass"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ---------------- Microservices ----------------
+  user-service:
+    build: ./user-service
+    environment:
+      DATABASE_URL: mysql+pymysql://user:pass@user-db:3306/user_db
+    ports: ["8001:8001"]
+    depends_on:
+      user-db:
+        condition: service_healthy
+
+  catalog-service:
+    build: ./catalog-service
+    environment:
+      DATABASE_URL: mysql+pymysql://catalog:pass@catalog-db:3306/catalog_db
+    ports: ["8002:8002"]
+    depends_on:
+      catalog-db:
+        condition: service_healthy
+
+  seating-service:
+    build: ./seating-service
+    environment:
+      DATABASE_URL: mysql://seating:pass@seating-db:3306/seating_db
+      HOLD_TTL_MIN: "15"
+    ports: ["8003:8003"]
+    depends_on:
+      seating-db:
+        condition: service_healthy
+
+  order-service:
+    build: ./order-service
+    environment:
+      DATABASE_URL: mysql://orderusr:pass@order-db:3306/order_db
+      CATALOG_URL: http://catalog-service:8002
+      SEATING_URL: http://seating-service:8003
+      PAYMENT_URL: http://payment-service:8005
+      USER_URL: http://user-service:8001
+      NOTIFY_URL: http://notification-service:8006
+    ports: ["8004:8004"]
+    depends_on:
+      order-db:
+        condition: service_healthy
+      catalog-service: { condition: service_started }
+      seating-service: { condition: service_started }
+      payment-service: { condition: service_started }
+
+  payment-service:
+    build: ./payment-service
+    environment:
+      DATABASE_URL: mysql://payment:pass@payment-db:3306/payment_db
+      PAYMENT_FAILURE_RATE: "0.10"
+    ports: ["8005:8005"]
+    depends_on:
+      payment-db:
+        condition: service_healthy
+
+  notification-service:
+    build: ./notification-service
+    environment:
+      DATABASE_URL: mysql://notify:pass@notification-db:3306/notification_db
+    ports: ["8006:8006"]
+    depends_on:
+      notification-db:
+        condition: service_healthy
+
+  # ---------------- Monitoring ----------------
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports: ["9090:9090"]
+    depends_on: [user-service, catalog-service, seating-service, order-service, payment-service, notification-service]
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    ports: ["3000:3000"]
+    depends_on: [prometheus]
+
+volumes:
+  user-db-data:
+  catalog-db-data:
+  seating-db-data:
+  order-db-data:
+  payment-db-data:
+  notification-db-data:

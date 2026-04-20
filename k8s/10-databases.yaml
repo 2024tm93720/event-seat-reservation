@@ -1,0 +1,276 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: user-db-pvc, namespace: ticketing }
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 1Gi } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: user-db, namespace: ticketing }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: user-db } }
+  template:
+    metadata: { labels: { app: user-db } }
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom: { secretKeyRef: { name: ticketing-secrets, key: MYSQL_ROOT_PASSWORD } }
+        - { name: MYSQL_DATABASE, value: "user_db" }
+        - { name: MYSQL_USER, value: "user" }
+        - name: MYSQL_PASSWORD
+          valueFrom: { secretKeyRef: { name: ticketing-secrets, key: MYSQL_PASSWORD } }
+        ports: [{ containerPort: 3306 }]
+        resources:
+          requests: { cpu: "100m", memory: "256Mi" }
+          limits: { cpu: "500m", memory: "512Mi" }
+        readinessProbe:
+          exec: { command: ["mysqladmin","ping","-h","localhost","-prootpass"] }
+          initialDelaySeconds: 20
+          periodSeconds: 10
+        volumeMounts: [{ name: data, mountPath: /var/lib/mysql }]
+      volumes:
+      - name: data
+        persistentVolumeClaim: { claimName: user-db-pvc }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: user-db, namespace: ticketing }
+spec:
+  selector: { app: user-db }
+  ports: [{ port: 3306, targetPort: 3306 }]
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: catalog-db-pvc, namespace: ticketing }
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 1Gi } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: catalog-db, namespace: ticketing }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: catalog-db } }
+  template:
+    metadata: { labels: { app: catalog-db } }
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom: { secretKeyRef: { name: ticketing-secrets, key: MYSQL_ROOT_PASSWORD } }
+        - { name: MYSQL_DATABASE, value: "catalog_db" }
+        - { name: MYSQL_USER, value: "catalog" }
+        - name: MYSQL_PASSWORD
+          valueFrom: { secretKeyRef: { name: ticketing-secrets, key: MYSQL_PASSWORD } }
+        ports: [{ containerPort: 3306 }]
+        resources:
+          requests: { cpu: "100m", memory: "256Mi" }
+          limits: { cpu: "500m", memory: "512Mi" }
+        readinessProbe:
+          exec: { command: ["mysqladmin","ping","-h","localhost","-prootpass"] }
+          initialDelaySeconds: 20
+          periodSeconds: 10
+        volumeMounts: [{ name: data, mountPath: /var/lib/mysql }]
+      volumes:
+      - name: data
+        persistentVolumeClaim: { claimName: catalog-db-pvc }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: catalog-db, namespace: ticketing }
+spec:
+  selector: { app: catalog-db }
+  ports: [{ port: 3306, targetPort: 3306 }]
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: seating-db-pvc, namespace: ticketing }
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 1Gi } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: seating-db, namespace: ticketing }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: seating-db } }
+  template:
+    metadata: { labels: { app: seating-db } }
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom: { secretKeyRef: { name: ticketing-secrets, key: MYSQL_ROOT_PASSWORD } }
+        - { name: MYSQL_DATABASE, value: "seating_db" }
+        - { name: MYSQL_USER, value: "seating" }
+        - name: MYSQL_PASSWORD
+          valueFrom: { secretKeyRef: { name: ticketing-secrets, key: MYSQL_PASSWORD } }
+        ports: [{ containerPort: 3306 }]
+        resources:
+          requests: { cpu: "100m", memory: "256Mi" }
+          limits: { cpu: "500m", memory: "512Mi" }
+        readinessProbe:
+          exec: { command: ["mysqladmin","ping","-h","localhost","-prootpass"] }
+          initialDelaySeconds: 20
+          periodSeconds: 10
+        volumeMounts: [{ name: data, mountPath: /var/lib/mysql }]
+      volumes:
+      - name: data
+        persistentVolumeClaim: { claimName: seating-db-pvc }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: seating-db, namespace: ticketing }
+spec:
+  selector: { app: seating-db }
+  ports: [{ port: 3306, targetPort: 3306 }]
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: order-db-pvc, namespace: ticketing }
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 1Gi } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: order-db, namespace: ticketing }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: order-db } }
+  template:
+    metadata: { labels: { app: order-db } }
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom: { secretKeyRef: { name: ticketing-secrets, key: MYSQL_ROOT_PASSWORD } }
+        - { name: MYSQL_DATABASE, value: "order_db" }
+        - { name: MYSQL_USER, value: "orderusr" }
+        - name: MYSQL_PASSWORD
+          valueFrom: { secretKeyRef: { name: ticketing-secrets, key: MYSQL_PASSWORD } }
+        ports: [{ containerPort: 3306 }]
+        resources:
+          requests: { cpu: "100m", memory: "256Mi" }
+          limits: { cpu: "500m", memory: "512Mi" }
+        readinessProbe:
+          exec: { command: ["mysqladmin","ping","-h","localhost","-prootpass"] }
+          initialDelaySeconds: 20
+          periodSeconds: 10
+        volumeMounts: [{ name: data, mountPath: /var/lib/mysql }]
+      volumes:
+      - name: data
+        persistentVolumeClaim: { claimName: order-db-pvc }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: order-db, namespace: ticketing }
+spec:
+  selector: { app: order-db }
+  ports: [{ port: 3306, targetPort: 3306 }]
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: payment-db-pvc, namespace: ticketing }
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 1Gi } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: payment-db, namespace: ticketing }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: payment-db } }
+  template:
+    metadata: { labels: { app: payment-db } }
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom: { secretKeyRef: { name: ticketing-secrets, key: MYSQL_ROOT_PASSWORD } }
+        - { name: MYSQL_DATABASE, value: "payment_db" }
+        - { name: MYSQL_USER, value: "payment" }
+        - name: MYSQL_PASSWORD
+          valueFrom: { secretKeyRef: { name: ticketing-secrets, key: MYSQL_PASSWORD } }
+        ports: [{ containerPort: 3306 }]
+        resources:
+          requests: { cpu: "100m", memory: "256Mi" }
+          limits: { cpu: "500m", memory: "512Mi" }
+        readinessProbe:
+          exec: { command: ["mysqladmin","ping","-h","localhost","-prootpass"] }
+          initialDelaySeconds: 20
+          periodSeconds: 10
+        volumeMounts: [{ name: data, mountPath: /var/lib/mysql }]
+      volumes:
+      - name: data
+        persistentVolumeClaim: { claimName: payment-db-pvc }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: payment-db, namespace: ticketing }
+spec:
+  selector: { app: payment-db }
+  ports: [{ port: 3306, targetPort: 3306 }]
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: notification-db-pvc, namespace: ticketing }
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 1Gi } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: notification-db, namespace: ticketing }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: notification-db } }
+  template:
+    metadata: { labels: { app: notification-db } }
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom: { secretKeyRef: { name: ticketing-secrets, key: MYSQL_ROOT_PASSWORD } }
+        - { name: MYSQL_DATABASE, value: "notification_db" }
+        - { name: MYSQL_USER, value: "notify" }
+        - name: MYSQL_PASSWORD
+          valueFrom: { secretKeyRef: { name: ticketing-secrets, key: MYSQL_PASSWORD } }
+        ports: [{ containerPort: 3306 }]
+        resources:
+          requests: { cpu: "100m", memory: "256Mi" }
+          limits: { cpu: "500m", memory: "512Mi" }
+        readinessProbe:
+          exec: { command: ["mysqladmin","ping","-h","localhost","-prootpass"] }
+          initialDelaySeconds: 20
+          periodSeconds: 10
+        volumeMounts: [{ name: data, mountPath: /var/lib/mysql }]
+      volumes:
+      - name: data
+        persistentVolumeClaim: { claimName: notification-db-pvc }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: notification-db, namespace: ticketing }
+spec:
+  selector: { app: notification-db }
+  ports: [{ port: 3306, targetPort: 3306 }]

@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'user-service'
+    static_configs: [{ targets: ['user-service:8001'] }]
+  - job_name: 'catalog-service'
+    static_configs: [{ targets: ['catalog-service:8002'] }]
+  - job_name: 'seating-service'
+    static_configs: [{ targets: ['seating-service:8003'] }]
+  - job_name: 'order-service'
+    static_configs: [{ targets: ['order-service:8004'] }]
+  - job_name: 'payment-service'
+    static_configs: [{ targets: ['payment-service:8005'] }]
+  - job_name: 'notification-service'
+    static_configs: [{ targets: ['notification-service:8006'] }]
