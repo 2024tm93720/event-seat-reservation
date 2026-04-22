@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 224 71% 4%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71% 4%;
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 220 14% 96%;
+    --accent-foreground: 222 47% 11%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 239 84% 67%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+  }
+
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+@layer components {
+  .seat-available {
+    @apply bg-emerald-100 border border-emerald-300 text-emerald-800 cursor-pointer hover:bg-emerald-200 hover:border-emerald-400 transition-colors;
+  }
+  .seat-held {
+    @apply bg-amber-100 border border-amber-300 text-amber-800 cursor-not-allowed;
+  }
+  .seat-allocated {
+    @apply bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed;
+  }
+  .seat-selected {
+    @apply bg-primary border-primary text-primary-foreground cursor-pointer hover:opacity-90 transition-opacity;
+  }
+}

@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payment Service Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --surface: #1a1d27; --surface2: #222637; --border: #2e3347;
+      --accent: #6c63ff; --accent2: #4ecdc4; --danger: #ff6b6b; --warning: #ffd93d;
+      --success: #6bcb77; --text: #e8eaf6; --muted: #7c85a2; --radius: 12px;
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg,#1a1d27,#12141e);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px; height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 18px; }
+    .logo-icon { width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px; }
+    .header-right { display:flex;align-items:center;gap:16px; }
+    .status-dot { display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted); }
+    .dot { width:8px;height:8px;border-radius:50%;background:var(--success);box-shadow:0 0 6px var(--success);animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+    .swagger-link { font-size:12px;color:var(--accent);text-decoration:none;background:rgba(108,99,255,.12);padding:6px 14px;border-radius:20px;border:1px solid rgba(108,99,255,.3);transition:all .2s; }
+    .swagger-link:hover { background:rgba(108,99,255,.25); }
+
+    /* ── Layout ── */
+    .container { max-width:1300px;margin:0 auto;padding:32px; }
+    .stats { display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px; }
+    .stat-card { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;display:flex;align-items:center;gap:16px;transition:border-color .2s; }
+    .stat-card:hover { border-color:var(--accent); }
+    .stat-icon { width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0; }
+    .stat-icon.purple{background:rgba(108,99,255,.15)} .stat-icon.teal{background:rgba(78,205,196,.15)} .stat-icon.green{background:rgba(107,203,119,.15)} .stat-icon.red{background:rgba(255,107,107,.15)} .stat-icon.yellow{background:rgba(255,217,61,.15)}
+    .stat-label { font-size:12px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px; }
+    .stat-value { font-size:24px;font-weight:700; }
+    .stat-value.revenue { font-size:18px; }
+    .main-grid { display:grid;grid-template-columns:360px 1fr;gap:24px; }
+
+    /* ── Sidebar ── */
+    .sidebar { display:flex;flex-direction:column;gap:8px; }
+    .section-title { font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);padding:4px 16px; }
+    .nav-btn { display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:var(--radius);border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer;font-size:14px;font-family:inherit;font-weight:500;transition:all .2s;text-align:left;width:100%; }
+    .nav-btn:hover { background:var(--surface);color:var(--text);border-color:var(--border); }
+    .nav-btn.active { background:var(--surface2);color:var(--text);border-color:var(--accent);box-shadow:0 0 0 1px rgba(108,99,255,.2); }
+    .nav-icon { width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;background:var(--surface2); }
+    .nav-btn.active .nav-icon { background:rgba(108,99,255,.2); }
+    .method-badge { margin-left:auto;font-size:10px;font-weight:700;padding:3px 7px;border-radius:4px;letter-spacing:.5px; }
+    .badge-post{background:rgba(107,203,119,.15);color:var(--success)} .badge-get{background:rgba(78,205,196,.15);color:var(--accent2)}
+    .divider { height:1px;background:var(--border);margin:4px 0; }
+
+    /* ── Cards ── */
+    .card { background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden; }
+    .card-header { padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px; }
+    .card-title { font-size:15px;font-weight:600; }
+    .card-desc { font-size:12px;color:var(--muted);margin-top:2px; }
+    .card-body { padding:22px; }
+
+    /* ── Forms ── */
+    .form-row { display:grid;grid-template-columns:1fr 1fr;gap:14px; }
+    .form-group { display:flex;flex-direction:column;gap:6px;margin-bottom:14px; }
+    .form-group:last-child { margin-bottom:0; }
+    label { font-size:12px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.5px; }
+    input, select, textarea { background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:14px;padding:10px 14px;transition:border-color .2s,box-shadow .2s;outline:none;width:100%; }
+    input:focus, select:focus, textarea:focus { border-color:var(--accent);box-shadow:0 0 0 3px rgba(108,99,255,.15); }
+    input::placeholder, textarea::placeholder { color:var(--muted); }
+    select { cursor:pointer;appearance:none;-webkit-appearance:none; }
+    textarea { resize:vertical;min-height:72px; }
+
+    /* ── Buttons ── */
+    .btn { display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 22px;border-radius:8px;border:none;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s; }
+    .btn-primary { background:linear-gradient(135deg,var(--accent),#5a52d5);color:#fff; }
+    .btn-primary:hover { filter:brightness(1.15);transform:translateY(-1px); }
+    .btn-confirm { background:linear-gradient(135deg,var(--success),#4caa5c);color:#1a1d27; }
+    .btn-confirm:hover { filter:brightness(1.1);transform:translateY(-1px); }
+    .btn-danger { background:linear-gradient(135deg,var(--danger),#e05555);color:#fff; }
+    .btn-danger:hover { filter:brightness(1.15);transform:translateY(-1px); }
+    .btn-teal { background:linear-gradient(135deg,var(--accent2),#3dbdb5);color:#1a1d27; }
+    .btn-teal:hover { filter:brightness(1.1);transform:translateY(-1px); }
+    .btn:active { transform:translateY(0); }
+    .btn:disabled { opacity:.5;cursor:not-allowed;transform:none; }
+    .btn-full { width:100%; }
+    .spinner { width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none; }
+    .btn.loading .spinner { display:block; }
+    .btn.loading .btn-text { display:none; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+
+    /* ── Response ── */
+    .response-area { background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden; }
+    .response-header { padding:12px 16px;background:rgba(0,0,0,.2);display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--muted);border-bottom:1px solid var(--border); }
+    .status-pill { padding:3px 10px;border-radius:12px;font-weight:700;font-size:11px; }
+    .status-2xx{background:rgba(107,203,119,.15);color:var(--success)} .status-4xx{background:rgba(255,107,107,.15);color:var(--danger)}
+    .response-body { padding:16px;font-family:'Courier New',monospace;font-size:12.5px;line-height:1.7;color:#a8b4d8;white-space:pre-wrap;word-break:break-all;max-height:340px;overflow-y:auto; }
+    .response-placeholder { color:var(--muted);font-style:italic;font-family:inherit;font-size:13px; }
+
+    /* ── Payment status badges ── */
+    .status-badge { display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px; }
+    .status-SUCCESS  { background:rgba(107,203,119,.15);color:var(--success); }
+    .status-FAILED   { background:rgba(255,107,107,.15);color:var(--danger); }
+    .status-PENDING  { background:rgba(255,217,61,.15);color:var(--warning); }
+    .status-REFUNDED { background:rgba(78,205,196,.15);color:var(--accent2); }
+
+    /* ── Payment detail card ── */
+    .payment-detail { display:flex;flex-direction:column;gap:14px; }
+    .ref-chip { display:inline-flex;align-items:center;gap:8px;background:rgba(108,99,255,.1);border:1px solid rgba(108,99,255,.25);border-radius:8px;padding:8px 14px;font-family:'Courier New',monospace;font-size:13px;color:#a89cf7;font-weight:700;letter-spacing:.5px; }
+
+    /* ── Payment list cards ── */
+    .payment-list { display:flex;flex-direction:column;gap:12px; }
+    .payment-card { background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;display:flex;align-items:center;gap:16px;transition:border-color .2s; }
+    .payment-card:hover { border-color:var(--accent); }
+    .payment-id { font-size:20px;font-weight:700;color:var(--accent);min-width:50px; }
+    .payment-meta { flex:1; }
+    .payment-meta-row { display:flex;gap:16px;flex-wrap:wrap; }
+    .payment-meta-item { font-size:12px;color:var(--muted); }
+    .payment-meta-item strong { color:var(--text);font-weight:500; }
+    .payment-amount { font-size:18px;font-weight:700;color:var(--accent2); }
+    .payment-amount-label { font-size:11px;color:var(--muted); }
+
+    /* ── Info boxes ── */
+    .info-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px; }
+    .info-box { background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px; }
+    .info-box-label { font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px; }
+    .info-box-value { font-size:16px;font-weight:600;margin-top:4px; }
+
+    /* ── Table ── */
+    .ao-table { width:100%;border-collapse:collapse;font-size:13px; }
+    .ao-table th { padding:10px 14px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);background:rgba(0,0,0,.15);border-bottom:1px solid var(--border);white-space:nowrap; }
+    .ao-table td { padding:11px 14px;border-bottom:1px solid rgba(46,51,71,.6);vertical-align:middle; }
+    .ao-table tr:last-child td { border-bottom:none; }
+    .ao-table tr:hover td { background:rgba(108,99,255,.04); }
+    .ao-id { font-weight:700;color:var(--accent); }
+    .ao-amount { font-weight:600;color:var(--accent2); }
+    .ao-ref { font-family:'Courier New',monospace;font-size:11.5px;color:#a89cf7; }
+
+    /* ── Pagination ── */
+    .pagination { display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-top:1px solid var(--border);font-size:13px; }
+    .page-btns { display:flex;gap:8px; }
+    .page-btn { background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 14px;font-family:inherit;font-size:13px;cursor:pointer;transition:all .2s; }
+    .page-btn:hover:not(:disabled) { border-color:var(--accent);color:var(--accent); }
+    .page-btn:disabled { opacity:.35;cursor:not-allowed; }
+    .page-info { color:var(--muted); }
+
+    /* ── Flow diagram ── */
+    .flow { display:flex;align-items:center;gap:0;margin-bottom:18px;overflow:hidden;border-radius:8px; }
+    .flow-step { flex:1;text-align:center;padding:10px 6px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px; }
+    .flow-step.done    { color:var(--success);background:rgba(107,203,119,.08); }
+    .flow-step.active  { color:var(--accent2);background:rgba(78,205,196,.1); }
+    .flow-step.pending { color:var(--muted);background:var(--surface2); }
+    .flow-step.failed  { color:var(--danger);background:rgba(255,107,107,.08); }
+    .flow-arrow { color:var(--border);font-size:16px;flex-shrink:0; }
+
+    /* ── Tab panels ── */
+    .tab-panel { display:none; }
+    .tab-panel.active { display:flex;flex-direction:column;gap:20px; }
+
+    /* ── Toast ── */
+    #toast-container { position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:8px;z-index:999; }
+    .toast { padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:10px;box-shadow:0 8px 24px rgba(0,0,0,.4);animation:slideIn .3s ease;max-width:320px; }
+    .toast-success{background:#1e3a2f;border:1px solid var(--success);color:var(--success)} .toast-error{background:#3a1e1e;border:1px solid var(--danger);color:var(--danger)}
+    @keyframes slideIn { from{transform:translateX(100%);opacity:0} to{transform:translateX(0);opacity:1} }
+    .empty-state { text-align:center;padding:40px;color:var(--muted); }
+    .empty-state .empty-icon { font-size:40px;margin-bottom:12px; }
+    ::-webkit-scrollbar { width:6px; }
+    ::-webkit-scrollbar-thumb { background:var(--border);border-radius:3px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">💳</div>
+    Payment Service
+  </div>
+  <div class="header-right">
+    <div class="status-dot">
+      <div class="dot" id="health-dot"></div>
+      <span id="health-label">Checking...</span>
+    </div>
+    <a class="swagger-link" href="/swagger-ui.html" target="_blank">⚡ Swagger UI</a>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- ── Stat cards ── -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+    <div style="font-size:13px;color:var(--muted);">Dashboard</div>
+    <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);">
+      <span id="last-updated"></span>
+      <button onclick="loadStats()" style="background:rgba(108,99,255,.12);border:1px solid rgba(108,99,255,.25);color:var(--accent);border-radius:6px;padding:4px 10px;font-size:11px;font-family:inherit;cursor:pointer;">↻ Refresh</button>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-icon purple">💳</div>
+      <div><div class="stat-label">Total Payments</div><div class="stat-value" id="stat-total">—</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon green">✅</div>
+      <div><div class="stat-label">Successful</div><div class="stat-value" id="stat-success">—</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon red">❌</div>
+      <div><div class="stat-label">Failed / Pending</div><div class="stat-value" id="stat-failed">—</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon teal">💰</div>
+      <div><div class="stat-label">Total Revenue</div><div class="stat-value revenue" id="stat-revenue">—</div></div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+
+    <!-- ── Sidebar ── -->
+    <div>
+      <div class="sidebar">
+        <div class="section-title">Operations</div>
+        <button class="nav-btn active" onclick="switchTab('charge',this)">
+          <div class="nav-icon">⚡</div> Charge Payment <span class="method-badge badge-post">POST</span>
+        </button>
+        <button class="nav-btn" onclick="switchTab('refund',this)">
+          <div class="nav-icon">↩️</div> Refund Payment <span class="method-badge badge-post">POST</span>
+        </button>
+        <button class="nav-btn" onclick="switchTab('get',this)">
+          <div class="nav-icon">🔍</div> Get by Payment ID <span class="method-badge badge-get">GET</span>
+        </button>
+        <button class="nav-btn" onclick="switchTab('byorder',this)">
+          <div class="nav-icon">📦</div> Get by Order ID <span class="method-badge badge-get">GET</span>
+        </button>
+        <button class="nav-btn" onclick="switchTab('all',this)">
+          <div class="nav-icon">📊</div> All Payments <span class="method-badge badge-get">GET</span>
+        </button>
+
+        <div class="divider" style="margin:8px 0;"></div>
+        <div class="section-title">Service Info</div>
+        <div class="card" style="margin-top:4px;">
+          <div class="card-body" style="padding:16px;">
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--muted)">Port</span><span style="font-weight:600;color:var(--accent)">9865</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--muted)">Gateway</span><span style="font-weight:600;color:var(--accent2)">Simulated</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--muted)">Database</span><span style="font-weight:600;" id="db-status">—</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--muted)">RabbitMQ</span><span style="font-weight:600;" id="rabbit-status">—</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Tab panels ── -->
+    <div>
+
+      <!-- ① Charge -->
+      <div class="tab-panel active" id="tab-charge">
+        <div class="card">
+          <div class="card-header">
+            <span style="font-size:20px;">⚡</span>
+            <div>
+              <div class="card-title">Charge a Payment</div>
+              <div class="card-desc">POST /v1/payments/charge — processes a gateway charge for an order</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="flow">
+              <div class="flow-step active">① Submit</div>
+              <div class="flow-arrow">›</div>
+              <div class="flow-step pending">② Gateway</div>
+              <div class="flow-arrow">›</div>
+              <div class="flow-step pending">③ SUCCESS / FAILED</div>
+            </div>
+
+            <div class="form-row" style="margin-bottom:14px;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label>Order ID *</label>
+                <input type="number" id="ch-orderId" placeholder="e.g. 42" />
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label>Amount (₹) *</label>
+                <input type="number" step="0.01" min="0.01" id="ch-amount" placeholder="e.g. 1574.21" />
+              </div>
+            </div>
+
+            <div class="form-row" style="margin-bottom:14px;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label>Payment Method *</label>
+                <div style="position:relative;">
+                  <select id="ch-method">
+                    <option value="">— Select method —</option>
+                    <option value="UPI">UPI</option>
+                    <option value="WALLET">Wallet</option>
+                    <option value="CREDIT_CARD">Credit Card</option>
+                    <option value="DEBIT_CARD">Debit Card</option>
+                    <option value="NET_BANKING">Net Banking</option>
+                  </select>
+                  <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted);font-size:12px;">▾</span>
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label>Idempotency Key</label>
+                <input type="text" id="ch-idempKey" placeholder="Auto-generated if blank" />
+              </div>
+            </div>
+
+            <div style="background:rgba(108,99,255,.06);border:1px solid rgba(108,99,255,.2);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:#a89cf7;">
+              💡 The <strong>Idempotency-Key</strong> header prevents duplicate charges on retry. Leave blank to auto-generate one from the order ID.
+            </div>
+
+            <button class="btn btn-primary btn-full" id="btn-charge" onclick="chargePayment()">
+              <div class="spinner"></div><span class="btn-text">⚡ Process Payment</span>
+            </button>
+          </div>
+        </div>
+        <div class="response-area">
+          <div class="response-header"><span>Response</span><div id="res-charge-status"></div></div>
+          <div class="response-body response-placeholder" id="res-charge-body">Fill in the form and click Process Payment...</div>
+        </div>
+      </div>
+
+      <!-- ② Refund -->
+      <div class="tab-panel" id="tab-refund">
+        <div class="card">
+          <div class="card-header">
+            <span style="font-size:20px;">↩️</span>
+            <div>
+              <div class="card-title">Refund a Payment</div>
+              <div class="card-desc">POST /v1/payments/refund — only SUCCESS payments can be refunded</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="flow">
+              <div class="flow-step done">SUCCESS ✓</div>
+              <div class="flow-arrow">›</div>
+              <div class="flow-step active">② Refund</div>
+              <div class="flow-arrow">›</div>
+              <div class="flow-step pending">③ REFUNDED</div>
+            </div>
+
+            <div class="form-row" style="margin-bottom:14px;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label>Payment ID *</label>
+                <input type="number" id="rf-paymentId" placeholder="e.g. 7" />
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label>Refund Amount (₹) *</label>
+                <input type="number" step="0.01" min="0.01" id="rf-amount" placeholder="e.g. 1574.21" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Reason (optional)</label>
+              <textarea id="rf-reason" placeholder="e.g. Customer requested cancellation"></textarea>
+            </div>
+
+            <div style="background:rgba(255,107,107,.06);border:1px solid rgba(255,107,107,.2);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:#ff9898;">
+              ⚠️ Partial refunds are supported. Refund amount must not exceed the original payment amount. Only <strong>SUCCESS</strong> payments are eligible.
+            </div>
+
+            <button class="btn btn-danger btn-full" id="btn-refund" onclick="refundPayment()">
+              <div class="spinner"></div><span class="btn-text">↩️ Process Refund</span>
+            </button>
+          </div>
+        </div>
+        <div class="response-area">
+          <div class="response-header"><span>Response</span><div id="res-refund-status"></div></div>
+          <div class="response-body response-placeholder" id="res-refund-body">Enter a payment ID and click Process Refund...</div>
+        </div>
+      </div>
+
+      <!-- ③ Get by Payment ID -->
+      <div class="tab-panel" id="tab-get">
+        <div class="card">
+          <div class="card-header">
+            <span style="font-size:20px;">🔍</span>
+            <div>
+              <div class="card-title">Get Payment by ID</div>
+              <div class="card-desc">GET /v1/payments/{id}</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label>Payment ID *</label>
+              <input type="number" id="gp-paymentId" placeholder="e.g. 7" />
+            </div>
+            <button class="btn btn-teal btn-full" id="btn-get" onclick="getById()">
+              <div class="spinner"></div><span class="btn-text">🔍 Fetch Payment</span>
+            </button>
+          </div>
+        </div>
+        <div id="payment-detail-card" style="display:none;" class="card">
+          <div class="card-body" id="payment-detail-body"></div>
+        </div>
+        <div class="response-area">
+          <div class="response-header"><span>Raw Response</span><div id="res-get-status"></div></div>
+          <div class="response-body response-placeholder" id="res-get-body">Enter a payment ID and click Fetch...</div>
+        </div>
+      </div>
+
+      <!-- ④ Get by Order ID -->
+      <div class="tab-panel" id="tab-byorder">
+        <div class="card">
+          <div class="card-header">
+            <span style="font-size:20px;">📦</span>
+            <div>
+              <div class="card-title">Get Payment by Order</div>
+              <div class="card-desc">GET /v1/payments/order/{orderId}</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label>Order ID *</label>
+              <input type="number" id="go-orderId" placeholder="e.g. 42" />
+            </div>
+            <button class="btn btn-teal btn-full" id="btn-byorder" onclick="getByOrder()">
+              <div class="spinner"></div><span class="btn-text">🔍 Fetch Payment</span>
+            </button>
+          </div>
+        </div>
+        <div id="payment-order-card" style="display:none;" class="card">
+          <div class="card-body" id="payment-order-body"></div>
+        </div>
+        <div class="response-area">
+          <div class="response-header"><span>Raw Response</span><div id="res-byorder-status"></div></div>
+          <div class="response-body response-placeholder" id="res-byorder-body">Enter an order ID and click Fetch...</div>
+        </div>
+      </div>
+
+      <!-- ⑤ All Payments -->
+      <div class="tab-panel" id="tab-all">
+        <div class="card">
+          <div class="card-header">
+            <span style="font-size:20px;">📊</span>
+            <div>
+              <div class="card-title">All Payments</div>
+              <div class="card-desc">GET /v1/payments/all — paginated list with optional status filter</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="form-row" style="margin-bottom:14px;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label>Status Filter</label>
+                <div style="position:relative;">
+                  <select id="ao-status">
+                    <option value="">All Statuses</option>
+                    <option value="SUCCESS">SUCCESS</option>
+                    <option value="FAILED">FAILED</option>
+                    <option value="PENDING">PENDING</option>
+                    <option value="REFUNDED">REFUNDED</option>
+                  </select>
+                  <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted);font-size:12px;">▾</span>
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label>Page Size</label>
+                <div style="position:relative;">
+                  <select id="ao-size">
+                    <option value="10">10 per page</option>
+                    <option value="20" selected>20 per page</option>
+                    <option value="50">50 per page</option>
+                  </select>
+                  <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted);font-size:12px;">▾</span>
+                </div>
+              </div>
+            </div>
+            <button class="btn btn-teal btn-full" id="btn-all" onclick="loadAllPayments(0)">
+              <div class="spinner"></div><span class="btn-text">📊 Load Payments</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="ao-result" style="display:none;" class="card">
+          <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+            <div style="font-size:13px;font-weight:600;" id="ao-result-title">Payments</div>
+            <div id="ao-status-badge"></div>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="ao-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Order</th>
+                  <th>Amount</th>
+                  <th>Method</th>
+                  <th>Status</th>
+                  <th>Reference</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+              <tbody id="ao-tbody"></tbody>
+            </table>
+          </div>
+          <div class="pagination">
+            <span class="page-info" id="ao-page-info">—</span>
+            <div class="page-btns">
+              <button class="page-btn" id="ao-prev" onclick="loadAllPayments(aoCurrentPage - 1)" disabled>‹ Prev</button>
+              <button class="page-btn" id="ao-next" onclick="loadAllPayments(aoCurrentPage + 1)" disabled>Next ›</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+  // ── Tab switching ──
+  function switchTab(name, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  // ── Helpers ──
+  function setLoading(id, on) {
+    const b = document.getElementById(id);
+    b.classList.toggle('loading', on);
+    b.disabled = on;
+  }
+
+  function showResponse(bodyId, statusId, status, data) {
+    const body = document.getElementById(bodyId);
+    body.classList.remove('response-placeholder');
+    body.textContent = JSON.stringify(data, null, 2);
+    const cls = status >= 200 && status < 300 ? 'status-2xx' : 'status-4xx';
+    document.getElementById(statusId).innerHTML = `<span class="status-pill ${cls}">${status}</span>`;
+  }
+
+  function toast(msg, type = 'success') {
+    const c = document.getElementById('toast-container');
+    const t = document.createElement('div');
+    t.className = `toast toast-${type}`;
+    t.innerHTML = (type === 'success' ? '✅ ' : '❌ ') + msg;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+  }
+
+  function statusBadge(s) {
+    return `<span class="status-badge status-${s}">${s}</span>`;
+  }
+
+  function fmt(v) {
+    return v != null ? '₹' + parseFloat(v).toFixed(2) : '—';
+  }
+
+  function infoBox(label, value, color) {
+    return `<div class="info-box"><div class="info-box-label">${label}</div><div class="info-box-value" style="color:${color || 'var(--text)'};">${value}</div></div>`;
+  }
+
+  function renderPaymentDetail(d, bodyId, cardId) {
+    document.getElementById(cardId).style.display = 'block';
+    document.getElementById(bodyId).innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div style="font-size:22px;font-weight:700;color:var(--accent)">Payment #${d.paymentId}</div>
+        ${statusBadge(d.status)}
+      </div>
+      <div class="info-grid">
+        ${infoBox('Order ID', '#' + d.orderId)}
+        ${infoBox('Amount', fmt(d.amount), 'var(--accent2)')}
+        ${infoBox('Method', d.method)}
+        ${infoBox('Status', d.status, d.status === 'SUCCESS' ? 'var(--success)' : d.status === 'FAILED' ? 'var(--danger)' : d.status === 'REFUNDED' ? 'var(--accent2)' : 'var(--warning)')}
+        ${infoBox('Payment ID', d.paymentId)}
+        ${infoBox('Created', new Date(d.createdAt).toLocaleDateString())}
+      </div>
+      <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Reference</div>
+      <div class="ref-chip">🔖 ${d.reference}</div>
+      ${d.failureReason ? `
+        <div style="margin-top:14px;background:rgba(255,107,107,.06);border:1px solid rgba(255,107,107,.2);border-radius:8px;padding:12px 14px;font-size:13px;color:#ff9898;">
+          ⚠️ <strong>Failure Reason:</strong> ${d.failureReason}
+        </div>` : ''}
+      <div style="font-size:11px;color:var(--muted);margin-top:14px;">Created: ${new Date(d.createdAt).toLocaleString()}</div>`;
+  }
+
+  // ── Charge ──
+  async function chargePayment() {
+    const orderId = document.getElementById('ch-orderId').value;
+    const amount  = document.getElementById('ch-amount').value;
+    const method  = document.getElementById('ch-method').value;
+    let   ikey    = document.getElementById('ch-idempKey').value.trim();
+
+    if (!orderId || !amount || !method) { toast('Order ID, Amount and Method are required', 'error'); return; }
+    if (parseFloat(amount) <= 0)        { toast('Amount must be greater than 0', 'error'); return; }
+
+    if (!ikey) ikey = `order-${orderId}-${Date.now()}`;
+
+    setLoading('btn-charge', true);
+    try {
+      const r = await fetch('/v1/payments/charge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': ikey },
+        body: JSON.stringify({ orderId: +orderId, amount: +amount, method })
+      });
+      const d = await r.json();
+      showResponse('res-charge-body', 'res-charge-status', r.status, d);
+      if (r.ok) {
+        const icon = d.status === 'SUCCESS' ? '✅' : '⚠️';
+        toast(`${icon} Payment ${d.reference} — ${d.status}`);
+        if (d.status === 'SUCCESS') {
+          document.getElementById('rf-paymentId').value = d.paymentId;
+          document.getElementById('rf-amount').value    = d.amount;
+        }
+        loadStats();
+      } else {
+        toast(d.message || 'Charge failed', 'error');
+      }
+    } catch(e) { toast('Network error: ' + e.message, 'error'); }
+    finally { setLoading('btn-charge', false); }
+  }
+
+  // ── Refund ──
+  async function refundPayment() {
+    const paymentId = document.getElementById('rf-paymentId').value;
+    const amount    = document.getElementById('rf-amount').value;
+    const reason    = document.getElementById('rf-reason').value.trim();
+
+    if (!paymentId || !amount) { toast('Payment ID and Amount are required', 'error'); return; }
+
+    setLoading('btn-refund', true);
+    try {
+      const r = await fetch('/v1/payments/refund', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentId: +paymentId, refundAmount: +amount, reason: reason || null })
+      });
+      const d = await r.json();
+      showResponse('res-refund-body', 'res-refund-status', r.status, d);
+      if (r.ok) {
+        toast(`↩️ Refund processed — payment #${d.paymentId} is now ${d.status}`);
+        loadStats();
+      } else {
+        toast(d.message || 'Refund failed', 'error');
+      }
+    } catch(e) { toast('Network error: ' + e.message, 'error'); }
+    finally { setLoading('btn-refund', false); }
+  }
+
+  // ── Get by ID ──
+  async function getById() {
+    const id = document.getElementById('gp-paymentId').value;
+    if (!id) { toast('Enter a Payment ID', 'error'); return; }
+    setLoading('btn-get', true);
+    try {
+      const r = await fetch(`/v1/payments/${id}`);
+      const d = await r.json();
+      showResponse('res-get-body', 'res-get-status', r.status, d);
+      if (r.ok) {
+        renderPaymentDetail(d, 'payment-detail-body', 'payment-detail-card');
+        toast('Payment #' + d.paymentId + ' loaded');
+      } else {
+        document.getElementById('payment-detail-card').style.display = 'none';
+        toast(d.message || 'Not found', 'error');
+      }
+    } catch(e) { toast('Network error: ' + e.message, 'error'); }
+    finally { setLoading('btn-get', false); }
+  }
+
+  // ── Get by Order ──
+  async function getByOrder() {
+    const id = document.getElementById('go-orderId').value;
+    if (!id) { toast('Enter an Order ID', 'error'); return; }
+    setLoading('btn-byorder', true);
+    try {
+      const r = await fetch(`/v1/payments/order/${id}`);
+      const d = await r.json();
+      showResponse('res-byorder-body', 'res-byorder-status', r.status, d);
+      if (r.ok) {
+        renderPaymentDetail(d, 'payment-order-body', 'payment-order-card');
+        toast('Payment for order #' + id + ' loaded');
+      } else {
+        document.getElementById('payment-order-card').style.display = 'none';
+        toast(d.message || 'Not found', 'error');
+      }
+    } catch(e) { toast('Network error: ' + e.message, 'error'); }
+    finally { setLoading('btn-byorder', false); }
+  }
+
+  // ── All Payments ──
+  let aoCurrentPage = 0;
+
+  async function loadAllPayments(page) {
+    if (page < 0) return;
+    aoCurrentPage = page;
+    const status = document.getElementById('ao-status').value;
+    const size   = document.getElementById('ao-size').value;
+    const params = new URLSearchParams({ page, size });
+    if (status) params.set('status', status);
+
+    setLoading('btn-all', true);
+    try {
+      const r = await fetch('/v1/payments/all?' + params);
+      const d = await r.json();
+      if (r.ok) {
+        renderAllPayments(d, status);
+        toast(`Loaded ${d.payments.length} of ${d.totalElements} payment(s)`);
+      } else {
+        toast(d.message || 'Request failed', 'error');
+      }
+    } catch(e) { toast('Network error: ' + e.message, 'error'); }
+    finally { setLoading('btn-all', false); }
+  }
+
+  function renderAllPayments(d, status) {
+    document.getElementById('ao-result').style.display = 'block';
+    document.getElementById('ao-result-title').textContent =
+      `${d.totalElements} Payment${d.totalElements !== 1 ? 's' : ''}`;
+    document.getElementById('ao-status-badge').innerHTML =
+      status ? statusBadge(status) : `<span style="font-size:12px;color:var(--muted);">All Statuses</span>`;
+
+    const tbody = document.getElementById('ao-tbody');
+    if (!d.payments.length) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted);">No payments found</td></tr>`;
+    } else {
+      tbody.innerHTML = d.payments.map(p => `
+        <tr>
+          <td class="ao-id">#${p.paymentId}</td>
+          <td>#${p.orderId}</td>
+          <td class="ao-amount">${fmt(p.amount)}</td>
+          <td style="color:var(--muted);">${p.method}</td>
+          <td>${statusBadge(p.status)}</td>
+          <td class="ao-ref">${p.reference}</td>
+          <td style="color:var(--muted);white-space:nowrap;">${new Date(p.createdAt).toLocaleDateString()}</td>
+        </tr>`).join('');
+    }
+
+    const start = d.page * d.size + 1;
+    const end   = Math.min(start + d.payments.length - 1, d.totalElements);
+    document.getElementById('ao-page-info').textContent =
+      d.totalElements ? `${start}–${end} of ${d.totalElements} (page ${d.page + 1} of ${d.totalPages})` : '0 results';
+    document.getElementById('ao-prev').disabled = d.first;
+    document.getElementById('ao-next').disabled = d.last;
+  }
+
+  // ── Stats ──
+  async function loadStats() {
+    try {
+      const r = await fetch('/v1/payments/stats');
+      if (!r.ok) return;
+      const d = await r.json();
+      animateCount('stat-total',   d.total);
+      animateCount('stat-success', d.success);
+      animateCount('stat-failed',  d.failed + d.pending);
+      document.getElementById('stat-revenue').textContent = '₹' + parseFloat(d.totalRevenue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const lu = document.getElementById('last-updated');
+      if (lu) lu.textContent = 'Updated ' + new Date().toLocaleTimeString();
+    } catch {}
+  }
+
+  function animateCount(id, target) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const start = parseInt(el.textContent) || 0;
+    const delta = target - start;
+    if (delta === 0) return;
+    const steps = 20, delay = 600 / steps;
+    let step = 0;
+    const timer = setInterval(() => {
+      step++;
+      el.textContent = Math.round(start + delta * (step / steps));
+      if (step >= steps) { el.textContent = target; clearInterval(timer); }
+    }, delay);
+  }
+
+  // ── Health ──
+  async function checkHealth() {
+    try {
+      const d = await (await fetch('/actuator/health')).json();
+      const up = d.status === 'UP';
+      const dot = document.getElementById('health-dot');
+      dot.style.background  = up ? 'var(--success)' : 'var(--warning)';
+      dot.style.boxShadow   = up ? '0 0 6px var(--success)' : '0 0 6px var(--warning)';
+      document.getElementById('health-label').textContent = up ? 'Service UP' : 'Degraded';
+      const dbEl  = document.getElementById('db-status');
+      const mqEl  = document.getElementById('rabbit-status');
+      dbEl.textContent = d.components?.db?.status     === 'UP' ? 'Connected' : 'Down';
+      mqEl.textContent = d.components?.rabbit?.status === 'UP' ? 'Connected' : 'Down';
+      dbEl.style.color = d.components?.db?.status     === 'UP' ? 'var(--success)' : 'var(--danger)';
+      mqEl.style.color = d.components?.rabbit?.status === 'UP' ? 'var(--success)' : 'var(--warning)';
+    } catch {
+      document.getElementById('health-label').textContent = 'Unreachable';
+      document.getElementById('health-dot').style.background = 'var(--danger)';
+    }
+  }
+
+  // ── Enter key ──
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' || e.target.tagName === 'BUTTON') return;
+    const active = document.querySelector('.tab-panel.active')?.id;
+    if (active === 'tab-charge')  chargePayment();
+    if (active === 'tab-refund')  refundPayment();
+    if (active === 'tab-get')     getById();
+    if (active === 'tab-byorder') getByOrder();
+    if (active === 'tab-all')     loadAllPayments(0);
+  });
+
+  // ── Init ──
+  checkHealth();
+  loadStats();
+  setInterval(checkHealth, 30000);
+  setInterval(loadStats, 10000);
+</script>
+</body>
+</html>

@@ -1,12 +1,13 @@
 # Event Ticketing System - full local stack
-# Six microservices, six MySQL databases, Prometheus + Grafana
+# user/catalog/seating/notification: Node.js / Python + MySQL
+# order/payment: Java Spring Boot + PostgreSQL + RabbitMQ async messaging
 version: "3.9"
 
 x-mysql-env: &mysql-env
   MYSQL_ROOT_PASSWORD: rootpass
 
 services:
-  # ---------------- Databases (DB-per-service) ----------------
+  # ---------------- MySQL Databases (user / catalog / seating / notification) ----------------
   user-db:
     image: mysql:8.0
     environment:
@@ -58,40 +59,6 @@ services:
       timeout: 5s
       retries: 10
 
-  order-db:
-    image: mysql:8.0
-    environment:
-      <<: *mysql-env
-      MYSQL_DATABASE: order_db
-      MYSQL_USER: orderusr
-      MYSQL_PASSWORD: pass
-    volumes:
-      - order-db-data:/var/lib/mysql
-      - ./db-init/order:/docker-entrypoint-initdb.d:ro
-    ports: ["33064:3306"]
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootpass"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
-  payment-db:
-    image: mysql:8.0
-    environment:
-      <<: *mysql-env
-      MYSQL_DATABASE: payment_db
-      MYSQL_USER: payment
-      MYSQL_PASSWORD: pass
-    volumes:
-      - payment-db-data:/var/lib/mysql
-      - ./db-init/payment:/docker-entrypoint-initdb.d:ro
-    ports: ["33065:3306"]
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootpass"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
   notification-db:
     image: mysql:8.0
     environment:
@@ -105,6 +72,54 @@ services:
     ports: ["33066:3306"]
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootpass"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ---------------- PostgreSQL Databases (order / payment) ----------------
+  order-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: order_db
+      POSTGRES_USER: order_user
+      POSTGRES_PASSWORD: order_pass
+    volumes:
+      - order-db-data:/var/lib/postgresql/data
+      - ./db-init/order:/docker-entrypoint-initdb.d:ro
+    ports: ["54321:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U order_user -d order_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  payment-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: payment_db
+      POSTGRES_USER: pay_user
+      POSTGRES_PASSWORD: pay_pass
+    volumes:
+      - payment-db-data:/var/lib/postgresql/data
+      - ./db-init/payment:/docker-entrypoint-initdb.d:ro
+    ports: ["54322:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pay_user -d payment_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ---------------- RabbitMQ (async messaging between order and payment) ----------------
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -141,28 +156,41 @@ services:
   order-service:
     build: ./order-service
     environment:
-      DATABASE_URL: mysql://orderusr:pass@order-db:3306/order_db
-      CATALOG_URL: http://catalog-service:8002
-      SEATING_URL: http://seating-service:8003
-      PAYMENT_URL: http://payment-service:8005
-      USER_URL: http://user-service:8001
-      NOTIFY_URL: http://notification-service:8006
-    ports: ["8004:8004"]
+      DB_HOST: order-db
+      DB_PORT: "5432"
+      DB_NAME: order_db
+      DB_USER: order_user
+      DB_PASS: order_pass
+      RABBIT_HOST: rabbitmq
+      RABBIT_PORT: "5672"
+      RABBIT_USER: guest
+      RABBIT_PASS: guest
+      SEATING_SERVICE_URL: http://seating-service:8003
+      CATALOG_SERVICE_URL: http://catalog-service:8002
+    ports: ["8965:8965"]
     depends_on:
       order-db:
         condition: service_healthy
-      catalog-service: { condition: service_started }
-      seating-service: { condition: service_started }
-      payment-service: { condition: service_started }
+      rabbitmq:
+        condition: service_healthy
 
   payment-service:
     build: ./payment-service
     environment:
-      DATABASE_URL: mysql://payment:pass@payment-db:3306/payment_db
-      PAYMENT_FAILURE_RATE: "0.10"
-    ports: ["8005:8005"]
+      DB_HOST: payment-db
+      DB_PORT: "5432"
+      DB_NAME: payment_db
+      DB_USER: pay_user
+      DB_PASS: pay_pass
+      RABBIT_HOST: rabbitmq
+      RABBIT_PORT: "5672"
+      RABBIT_USER: guest
+      RABBIT_PASS: guest
+    ports: ["9865:9865"]
     depends_on:
       payment-db:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
 
   notification-service:
@@ -173,6 +201,18 @@ services:
     depends_on:
       notification-db:
         condition: service_healthy
+
+  # ---------------- Frontend ----------------
+  frontend:
+    build: ./frontend
+    ports: ["3001:3001"]
+    depends_on:
+      - user-service
+      - catalog-service
+      - seating-service
+      - order-service
+      - payment-service
+      - notification-service
 
   # ---------------- Monitoring ----------------
   prometheus:
