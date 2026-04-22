@@ -3,12 +3,12 @@ import axios from 'axios'
 const make = (base) =>
   axios.create({ baseURL: base, timeout: 15000, headers: { 'Content-Type': 'application/json' } })
 
-export const usersAPI        = make('/api/users')
-export const catalogAPI      = make('/api/catalog')
-export const seatingAPI      = make('/api/seating')
-export const ordersAPI       = make('/api/orders')
-export const paymentsAPI     = make('/api/payments')
-export const notificationsAPI = make('/api/notifications')
+export const usersAPI         = make(import.meta.env.VITE_USERS_API_URL         || '/api/users')
+export const catalogAPI       = make(import.meta.env.VITE_CATALOG_API_URL       || '/api/catalog')
+export const seatingAPI       = make(import.meta.env.VITE_SEATING_API_URL       || '/api/seating')
+export const ordersAPI        = make(import.meta.env.VITE_ORDERS_API_URL        || '/api/orders')
+export const paymentsAPI      = make(import.meta.env.VITE_PAYMENTS_API_URL      || '/api/payments')
+export const notificationsAPI = make(import.meta.env.VITE_NOTIFICATIONS_API_URL || '/api/notifications')
 
 // ── Users ────────────────────────────────────────────────────────────────────
 export const loginUser    = (email, password) =>

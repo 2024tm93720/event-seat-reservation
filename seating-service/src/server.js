@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors');
 const mysql = require('mysql2/promise');
 const client = require('prom-client');
 const { v4: uuid } = require('uuid');
@@ -30,6 +31,7 @@ const seatReservationsFailed = new client.Counter({ name: 'seat_reservations_fai
 const seatHoldsActive = new client.Gauge({ name: 'seat_holds_active', help: 'Currently active seat holds', registers: [register] });
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 app.use(httpLogger);
 

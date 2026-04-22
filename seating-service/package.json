@@ -5,6 +5,7 @@
   "scripts": { "start": "node src/server.js" },
   "dependencies": {
     "express": "^4.21.0",
+    "cors": "^2.8.5",
     "mysql2": "^3.11.0",
     "axios": "^1.7.7",
     "prom-client": "^15.1.3",

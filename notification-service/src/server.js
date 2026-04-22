@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors');
 const mysql = require('mysql2/promise');
 const client = require('prom-client');
 const { logger, httpLogger } = require('./logger');
@@ -20,6 +21,7 @@ client.collectDefaultMetrics({ register });
 const notifSent = new client.Counter({ name: 'notifications_sent_total', help: 'Total notifications sent', labelNames: ['channel'], registers: [register] });
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 app.use(httpLogger);
 
