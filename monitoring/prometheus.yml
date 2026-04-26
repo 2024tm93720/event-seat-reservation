@@ -10,8 +10,10 @@ scrape_configs:
   - job_name: 'seating-service'
     static_configs: [{ targets: ['seating-service:8003'] }]
   - job_name: 'order-service'
-    static_configs: [{ targets: ['order-service:8004'] }]
+    metrics_path: /actuator/prometheus
+    static_configs: [{ targets: ['order-service:8965'] }]
   - job_name: 'payment-service'
-    static_configs: [{ targets: ['payment-service:8005'] }]
+    metrics_path: /actuator/prometheus
+    static_configs: [{ targets: ['payment-service:9865'] }]
   - job_name: 'notification-service'
     static_configs: [{ targets: ['notification-service:8006'] }]

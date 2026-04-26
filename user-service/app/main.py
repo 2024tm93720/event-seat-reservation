@@ -2,6 +2,7 @@
 import os, uuid, logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import create_engine, text
 from passlib.hash import bcrypt
@@ -38,6 +39,7 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="User Service", version="1.0.0", lifespan=lifespan)
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 @app.middleware("http")
 async def correlation_id(request: Request, call_next):

@@ -1,8 +1,14 @@
-FROM node:20-alpine
-WORKDIR /app
-COPY package.json ./
-RUN npm install --omit=dev
+FROM maven:3.9-eclipse-temurin-17 AS builder
+WORKDIR /build
+COPY pom.xml .
+RUN mvn dependency:go-offline -q
 COPY src ./src
-EXPOSE 8004
-HEALTHCHECK --interval=30s --timeout=5s CMD wget -qO- http://localhost:8004/health || exit 1
-CMD ["node","src/server.js"]
+RUN mvn package -DskipTests -q
+
+FROM eclipse-temurin:17-jre-jammy
+WORKDIR /app
+COPY --from=builder /build/target/order-service-1.0.0.jar app.jar
+EXPOSE 8965
+HEALTHCHECK --interval=30s --timeout=5s --start-period=90s \
+  CMD wget -qO- http://localhost:8965/actuator/health || exit 1
+ENTRYPOINT ["java", "-jar", "app.jar"]

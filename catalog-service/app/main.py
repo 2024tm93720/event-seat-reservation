@@ -2,6 +2,7 @@
 import os, uuid, logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy import create_engine, text
 from prometheus_client import Counter, generate_latest, CONTENT_TYPE_LATEST
@@ -32,6 +33,7 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="Catalog Service", version="1.0.0", lifespan=lifespan)
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 @app.middleware("http")
 async def cid_mw(request: Request, call_next):
