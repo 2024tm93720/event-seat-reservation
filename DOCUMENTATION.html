@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SeatSavvy — Product Documentation</title>
+<style>
+  :root {
+    --bg:      #0d1117;
+    --surface: #161b22;
+    --surface2:#1c2128;
+    --border:  #30363d;
+    --text:    #e6edf3;
+    --muted:   #8b949e;
+    --green:   #3fb950;
+    --red:     #f85149;
+    --yellow:  #d29922;
+    --blue:    #58a6ff;
+    --purple:  #bc8cff;
+    --orange:  #ffa657;
+    --cyan:    #39d353;
+    --indigo:  #818cf8;
+  }
+  * { box-sizing: border-box; margin:0; padding:0; }
+  html { scroll-behavior: smooth; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; display:flex; }
+
+  /* ── Sidebar nav ── */
+  .sidebar {
+    width: 230px; min-height: 100vh; background: var(--surface);
+    border-right: 1px solid var(--border); position: sticky; top: 0;
+    overflow-y: auto; flex-shrink: 0; padding: 24px 0;
+  }
+  .sidebar-logo { padding: 0 18px 20px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+  .sidebar-logo h2 { font-size: 1rem; font-weight: 800; letter-spacing: -.4px; }
+  .sidebar-logo p  { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
+  .nav-section { font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.1px; color: var(--muted); padding: 12px 18px 5px; }
+  .nav-link {
+    display: block; padding: 6px 18px; font-size: 0.8rem; color: var(--muted);
+    text-decoration: none; border-left: 2px solid transparent;
+    transition: color .15s, border-color .15s;
+  }
+  .nav-link:hover, .nav-link.active { color: var(--text); border-left-color: var(--blue); }
+  .nav-link.active { color: var(--blue); background: rgba(88,166,255,.07); }
+
+  /* ── Content ── */
+  .content { flex: 1; padding: 40px 52px; max-width: 1100px; }
+  section { margin-bottom: 56px; }
+
+  /* headings */
+  h1 { font-size: 2rem; font-weight: 800; letter-spacing: -.6px; margin-bottom: 8px; }
+  h2 { font-size: 1.35rem; font-weight: 700; margin-bottom: 16px; letter-spacing: -.3px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1rem; font-weight: 700; margin: 22px 0 10px; }
+  h4 { font-size: 0.85rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin: 14px 0 7px; }
+  p  { font-size: 0.88rem; color: #c9d1d9; line-height: 1.7; margin-bottom: 10px; }
+
+  /* hero */
+  .hero {
+    background: linear-gradient(135deg,#1c1a3a 0%,#161b22 55%,#0d1117 100%);
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 32px 36px; margin-bottom: 40px;
+    display: flex; align-items: flex-start; gap: 22px;
+  }
+  .hero-icon { font-size: 3rem; }
+  .hero h1  { margin-bottom: 5px; }
+  .hero p   { color: var(--muted); max-width: 600px; margin-bottom: 16px; }
+  .hero-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+  .hbadge {
+    font-size: 0.72rem; font-weight: 600; padding: 4px 12px; border-radius: 20px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .hbadge.blue   { background:rgba(88,166,255,.12); color:var(--blue); border:1px solid rgba(88,166,255,.25); }
+  .hbadge.green  { background:rgba(63,185,80,.12); color:var(--green); border:1px solid rgba(63,185,80,.25); }
+  .hbadge.orange { background:rgba(255,166,87,.12); color:var(--orange); border:1px solid rgba(255,166,87,.25); }
+  .hbadge.purple { background:rgba(188,140,255,.12); color:var(--purple); border:1px solid rgba(188,140,255,.25); }
+
+  /* ── Architecture diagram wrapper ── */
+  .diagram-wrap {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px; overflow-x: auto;
+  }
+  .diagram-wrap svg { display: block; margin: auto; }
+
+  /* ── Service cards ── */
+  .svc-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .svc-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden;
+  }
+  .svc-card-header {
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,.025);
+  }
+  .svc-icon { font-size: 1.4rem; }
+  .svc-name { font-size: 0.9rem; font-weight: 700; }
+  .svc-sub  { font-size: 0.7rem; color: var(--muted); }
+  .svc-port { margin-left:auto; font-family:monospace; font-size:0.72rem;
+    background:var(--surface2); border:1px solid var(--border); padding:2px 8px; border-radius:6px; color:var(--blue); }
+  .svc-body { padding: 14px 16px; }
+  .kv-row { display:flex; gap:8px; margin-bottom:6px; align-items:baseline; }
+  .kv-key { font-size:0.69rem; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; width:90px; flex-shrink:0; }
+  .kv-val { font-size:0.8rem; color:var(--text); }
+  .kv-val code { font-family:monospace; font-size:0.76rem; color:var(--orange); }
+  .tag { display:inline-block; font-size:0.65rem; font-weight:700; padding:1px 7px; border-radius:8px; margin:2px 2px 0 0; }
+  .tag.java   { background:rgba(255,166,87,.15); color:var(--orange); border:1px solid rgba(255,166,87,.3); }
+  .tag.python { background:rgba(63,185,80,.15); color:var(--green); border:1px solid rgba(63,185,80,.3); }
+  .tag.node   { background:rgba(88,166,255,.15); color:var(--blue); border:1px solid rgba(88,166,255,.3); }
+  .tag.react  { background:rgba(188,140,255,.15); color:var(--purple); border:1px solid rgba(188,140,255,.3); }
+  .tag.mysql  { background:rgba(57,211,83,.1); color:var(--cyan); border:1px solid rgba(57,211,83,.3); }
+  .tag.pg     { background:rgba(88,166,255,.1); color:#74b9f5; border:1px solid rgba(88,166,255,.2); }
+  .tag.rabbit { background:rgba(255,100,50,.12); color:#ff8855; border:1px solid rgba(255,100,50,.3); }
+
+  /* ── Tables ── */
+  .tbl { width:100%; border-collapse:collapse; font-size:0.8rem; margin-bottom:10px; }
+  .tbl th { color:var(--muted); font-weight:700; text-transform:uppercase; font-size:0.67rem; letter-spacing:.7px; padding:7px 12px; text-align:left; border-bottom:1px solid var(--border); }
+  .tbl td { padding:8px 12px; border-bottom:1px solid rgba(48,54,61,.6); vertical-align:top; }
+  .tbl tr:last-child td { border-bottom:none; }
+  .tbl td code { font-family:monospace; font-size:0.76rem; color:var(--orange); }
+  .tbl td.mono { font-family:monospace; font-size:0.76rem; color:var(--blue); }
+  .tbl td.green { color:var(--green); font-weight:700; }
+  .tbl td.muted { color:var(--muted); }
+
+  /* ── Tech stack pill row ── */
+  .pill-row { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
+  .pill {
+    font-size:0.74rem; padding:5px 13px; border-radius:20px; font-weight:600;
+    border:1px solid var(--border); background:var(--surface2); color:var(--text);
+    display:flex; align-items:center; gap:5px;
+  }
+  .pill .ver { color:var(--muted); font-weight:400; font-size:0.68rem; }
+
+  /* ── Info boxes ── */
+  .infobox {
+    border-radius:8px; padding:14px 16px; margin:14px 0; font-size:0.83rem; line-height:1.65;
+    border-left:3px solid;
+  }
+  .infobox.blue   { background:rgba(88,166,255,.07); border-color:var(--blue); color:#c0d8ff; }
+  .infobox.green  { background:rgba(63,185,80,.07); border-color:var(--green); color:#b0e8bc; }
+  .infobox.orange { background:rgba(255,166,87,.07); border-color:var(--orange); color:#ffd4a8; }
+  .infobox strong { color:inherit; }
+
+  /* ── Code block ── */
+  .code-block {
+    background:#0d1117; border:1px solid var(--border); border-radius:6px;
+    padding:12px 14px; font-family:monospace; font-size:0.76rem; line-height:1.6;
+    overflow-x:auto; white-space:pre; color:#c9d1d9; margin:10px 0;
+  }
+  .code-block .cm  { color:var(--muted); }
+  .code-block .kw  { color:#ff7b72; }
+  .code-block .str { color:#a5d6ff; }
+  .code-block .fn  { color:#d2a8ff; }
+  .code-block .num { color:var(--green); }
+
+  /* ── Flow steps ── */
+  .flow { display:flex; flex-direction:column; gap:0; }
+  .flow-step {
+    display:flex; gap:14px; align-items:flex-start; padding:10px 0;
+    border-left:2px solid var(--border); margin-left:12px; padding-left:20px; position:relative;
+  }
+  .flow-step::before {
+    content:attr(data-n); position:absolute; left:-11px; top:10px;
+    width:20px; height:20px; border-radius:50%; background:var(--surface2);
+    border:2px solid var(--blue); color:var(--blue); font-size:0.65rem; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .flow-svc { font-size:0.75rem; font-weight:700; color:var(--blue); min-width:130px; padding-top:2px; }
+  .flow-desc{ font-size:0.82rem; color:#c9d1d9; line-height:1.5; }
+
+  /* footer */
+  .doc-footer { color:var(--muted); font-size:0.73rem; padding-top:24px; border-top:1px solid var(--border); margin-top:30px; }
+
+</style>
+</head>
+<body>
+
+<!-- ══════════════ SIDEBAR ══════════════ -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <h2>🎟 SeatSavvy</h2>
+    <p>Product Documentation</p>
+  </div>
+  <div class="nav-section">Overview</div>
+  <a class="nav-link active" href="#overview">Product Overview</a>
+  <a class="nav-link" href="#architecture">Architecture Diagram</a>
+  <a class="nav-link" href="#dataflow">Request Data Flow</a>
+
+  <div class="nav-section">Services</div>
+  <a class="nav-link" href="#frontend">Frontend</a>
+  <a class="nav-link" href="#user-service">User Service</a>
+  <a class="nav-link" href="#catalog-service">Catalog Service</a>
+  <a class="nav-link" href="#seating-service">Seating Service</a>
+  <a class="nav-link" href="#order-service">Order Service</a>
+  <a class="nav-link" href="#payment-service">Payment Service</a>
+  <a class="nav-link" href="#notification-service">Notification Service</a>
+
+  <div class="nav-section">Infrastructure</div>
+  <a class="nav-link" href="#databases">Databases</a>
+  <a class="nav-link" href="#messaging">Messaging</a>
+  <a class="nav-link" href="#kubernetes">Kubernetes</a>
+  <a class="nav-link" href="#observability">Observability</a>
+
+  <div class="nav-section">Reference</div>
+  <a class="nav-link" href="#tech-matrix">Technology Matrix</a>
+  <a class="nav-link" href="#api-endpoints">API Endpoints</a>
+  <a class="nav-link" href="#patterns">Design Patterns</a>
+</nav>
+
+<!-- ══════════════ CONTENT ══════════════ -->
+<div class="content">
+
+  <!-- ── HERO ── -->
+  <div class="hero" id="overview">
+    <div class="hero-icon">🎟</div>
+    <div>
+      <h1>SeatSavvy</h1>
+      <p>A cloud-native, microservices-based event seat reservation platform built with polyglot architecture — Python, Java, Node.js, and React — deployed on Kubernetes with full observability through Prometheus and Grafana.</p>
+      <div class="hero-badges">
+        <span class="hbadge blue">☁️ Kubernetes</span>
+        <span class="hbadge green">🐍 Python · FastAPI</span>
+        <span class="hbadge orange">☕ Java · Spring Boot</span>
+        <span class="hbadge blue">⬡ Node.js · Express</span>
+        <span class="hbadge purple">⚛️ React · Vite</span>
+        <span class="hbadge green">🐇 RabbitMQ</span>
+        <span class="hbadge blue">📊 Prometheus · Grafana</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PRODUCT OVERVIEW ── -->
+  <section>
+    <h2>Product Overview</h2>
+    <p>SeatSavvy is a full-stack event ticketing system that enables users to browse events, select seats on an interactive grid, process payments, and receive digital e-tickets. The system is designed with the <strong>microservices architecture pattern</strong>, where each business domain is owned by an independent service with its own database, technology stack, and deployment lifecycle.</p>
+    <p>The platform demonstrates production-grade engineering practices: idempotent APIs, outbox pattern for reliable messaging, database-per-service isolation, structured JSON logging with distributed tracing via correlation IDs, custom Micrometer metrics exported to Prometheus, and Kubernetes-native health probes.</p>
+
+    <h3>Core User Journey</h3>
+    <div class="flow">
+      <div class="flow-step" data-n="1">
+        <div class="flow-svc">User Service</div>
+        <div class="flow-desc">User registers or logs in. Password hashed with BCrypt. JWT-style session stored in browser localStorage.</div>
+      </div>
+      <div class="flow-step" data-n="2">
+        <div class="flow-svc">Catalog Service</div>
+        <div class="flow-desc">Browse events. Each event has metadata — venue, date, category, status (ON_SALE / SOLD_OUT), and pricing tiers.</div>
+      </div>
+      <div class="flow-step" data-n="3">
+        <div class="flow-svc">Seating Service</div>
+        <div class="flow-desc">Interactive seat map renders per event. Seats have statuses: AVAILABLE, HELD, ALLOCATED. A temporary hold (15-min TTL) is placed on selection.</div>
+      </div>
+      <div class="flow-step" data-n="4">
+        <div class="flow-svc">Order Service</div>
+        <div class="flow-desc">Order placed (status: RESERVED). Subtotal + 5% tax calculated. Idempotency key prevents duplicate orders. Outbox event ORDER_PLACED published to RabbitMQ.</div>
+      </div>
+      <div class="flow-step" data-n="5">
+        <div class="flow-svc">Payment Service</div>
+        <div class="flow-desc">Simulated payment gateway processes charge (~98% success). PAYMENT_SUCCESS or PAYMENT_FAILED event published back to RabbitMQ.</div>
+      </div>
+      <div class="flow-step" data-n="6">
+        <div class="flow-svc">Order Service</div>
+        <div class="flow-desc">Consumes payment result. On SUCCESS: order confirmed, e-tickets generated (TKT-* codes). On FAILED: order marked PAYMENT_FAILED.</div>
+      </div>
+      <div class="flow-step" data-n="7">
+        <div class="flow-svc">Notification Service</div>
+        <div class="flow-desc">Consumes ORDER_CONFIRMED event. Sends booking confirmation email (Gmail SMTP or logs if unconfigured). Metric: notifications_sent_total.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── ARCHITECTURE DIAGRAM ── -->
+  <section id="architecture">
+    <h2>Architecture Diagram</h2>
+    <div class="diagram-wrap">
+      <svg viewBox="0 0 1020 780" width="980" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+        <defs>
+          <!-- gradients -->
+          <linearGradient id="gBg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#1c2128"/>
+            <stop offset="100%" stop-color="#0d1117"/>
+          </linearGradient>
+          <linearGradient id="gBlue" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#1a3a5a"/>
+            <stop offset="100%" stop-color="#0d2040"/>
+          </linearGradient>
+          <linearGradient id="gGreen" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#1a3a20"/>
+            <stop offset="100%" stop-color="#0d1f12"/>
+          </linearGradient>
+          <linearGradient id="gOrange" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#3a2a10"/>
+            <stop offset="100%" stop-color="#200f00"/>
+          </linearGradient>
+          <linearGradient id="gPurple" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#2a1a3a"/>
+            <stop offset="100%" stop-color="#130a20"/>
+          </linearGradient>
+          <linearGradient id="gRabbit" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#3a1a10"/>
+            <stop offset="100%" stop-color="#200800"/>
+          </linearGradient>
+          <linearGradient id="gProm" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#3a2010"/>
+            <stop offset="100%" stop-color="#1a0800"/>
+          </linearGradient>
+          <!-- arrow marker -->
+          <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0,0 L0,8 L8,4 z" fill="#30363d"/>
+          </marker>
+          <marker id="arrowBlue" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0,0 L0,8 L8,4 z" fill="#58a6ff"/>
+          </marker>
+          <marker id="arrowOrange" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0,0 L0,8 L8,4 z" fill="#ffa657"/>
+          </marker>
+          <marker id="arrowGreen" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0,0 L0,8 L8,4 z" fill="#3fb950"/>
+          </marker>
+          <marker id="arrowDash" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0,0 L0,8 L8,4 z" fill="#8b949e"/>
+          </marker>
+          <!-- drop shadow -->
+          <filter id="shadow" x="-5%" y="-5%" width="110%" height="120%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.4"/>
+          </filter>
+        </defs>
+
+        <!-- Background -->
+        <rect width="1020" height="780" fill="url(#gBg)" rx="12"/>
+
+        <!-- ── LAYER LABELS ── -->
+        <!-- Client Layer -->
+        <rect x="14" y="20" width="992" height="90" rx="8" fill="none" stroke="#30363d" stroke-dasharray="4,3"/>
+        <text x="24" y="36" fill="#8b949e" font-size="9" font-weight="700" text-transform="uppercase" letter-spacing="1">CLIENT LAYER</text>
+
+        <!-- Ingress Layer -->
+        <rect x="14" y="124" width="992" height="60" rx="8" fill="none" stroke="#30363d" stroke-dasharray="4,3"/>
+        <text x="24" y="140" fill="#8b949e" font-size="9" font-weight="700" letter-spacing="1">INGRESS · NGINX INGRESS CONTROLLER</text>
+
+        <!-- Application Layer -->
+        <rect x="14" y="198" width="992" height="250" rx="8" fill="none" stroke="#30363d" stroke-dasharray="4,3"/>
+        <text x="24" y="214" fill="#8b949e" font-size="9" font-weight="700" letter-spacing="1">APPLICATION LAYER · KUBERNETES NAMESPACE: seatsavvy</text>
+
+        <!-- Messaging Layer -->
+        <rect x="14" y="462" width="992" height="90" rx="8" fill="none" stroke="#30363d" stroke-dasharray="4,3"/>
+        <text x="24" y="478" fill="#8b949e" font-size="9" font-weight="700" letter-spacing="1">MESSAGING LAYER</text>
+
+        <!-- Data Layer -->
+        <rect x="14" y="566" width="740" height="105" rx="8" fill="none" stroke="#30363d" stroke-dasharray="4,3"/>
+        <text x="24" y="582" fill="#8b949e" font-size="9" font-weight="700" letter-spacing="1">DATA LAYER · DATABASE-PER-SERVICE</text>
+
+        <!-- Observability Layer -->
+        <rect x="768" y="462" width="238" height="210" rx="8" fill="none" stroke="#30363d" stroke-dasharray="4,3"/>
+        <text x="778" y="478" fill="#8b949e" font-size="9" font-weight="700" letter-spacing="1">OBSERVABILITY</text>
+
+        <!-- ══════════════════════════════════════════════ -->
+        <!-- CLIENT: Browser -->
+        <!-- ══════════════════════════════════════════════ -->
+        <rect x="400" y="30" width="220" height="68" rx="8" fill="url(#gPurple)" stroke="#bc8cff" stroke-width="1.2" filter="url(#shadow)"/>
+        <text x="510" y="52" text-anchor="middle" fill="#bc8cff" font-size="16">⚛️</text>
+        <text x="510" y="68" text-anchor="middle" fill="#e6edf3" font-size="11" font-weight="700">Frontend</text>
+        <text x="510" y="82" text-anchor="middle" fill="#8b949e" font-size="9">React 18 · Vite 5 · Tailwind CSS · Nginx</text>
+        <text x="510" y="94" text-anchor="middle" fill="#bc8cff" font-size="8.5" font-weight="700">:3001 · TanStack Query · React Router</text>
+
+        <!-- ══════════════════════════════════════════════ -->
+        <!-- INGRESS -->
+        <!-- ══════════════════════════════════════════════ -->
+        <rect x="340" y="130" width="340" height="42" rx="7" fill="#1a1f2e" stroke="#58a6ff" stroke-width="1.2" filter="url(#shadow)"/>
+        <text x="510" y="150" text-anchor="middle" fill="#e6edf3" font-size="11" font-weight="700">Nginx Ingress Controller</text>
+        <text x="510" y="163" text-anchor="middle" fill="#8b949e" font-size="9">seatsavvy.local · proxy_read_timeout 300s · client_max_body_size 10m</text>
+
+        <!-- Frontend → Ingress -->
+        <line x1="510" y1="98" x2="510" y2="130" stroke="#58a6ff" stroke-width="1.3" marker-end="url(#arrowBlue)"/>
+
+        <!-- ══════════════════════════════════════════════ -->
+        <!-- APPLICATION SERVICES -->
+        <!-- ══════════════════════════════════════════════ -->
+
+        <!-- User Service -->
+        <rect x="26" y="222" width="148" height="74" rx="7" fill="url(#gGreen)" stroke="#3fb950" stroke-width="1.2" filter="url(#shadow)"/>
+        <text x="100" y="243" text-anchor="middle" fill="#3fb950" font-size="14">👤</text>
+        <text x="100" y="258" text-anchor="middle" fill="#e6edf3" font-size="10.5" font-weight="700">User Service</text>
+        <text x="100" y="271" text-anchor="middle" fill="#8b949e" font-size="8.5">Python 3.11 · FastAPI 0.115</text>
+        <text x="100" y="282" text-anchor="middle" fill="#8b949e" font-size="8.5">SQLAlchemy · PyMySQL</text>
+        <text x="100" y="293" text-anchor="middle" fill="#3fb950" font-size="8" font-weight="700">:8001</text>
+
+        <!-- Catalog Service -->
+        <rect x="192" y="222" width="148" height="74" rx="7" fill="url(#gGreen)" stroke="#39d353" stroke-width="1.2" filter="url(#shadow)"/>
+        <text x="266" y="243" text-anchor="middle" fill="#39d353" font-size="14">🗓️</text>
+        <text x="266" y="258" text-anchor="middle" fill="#e6edf3" font-size="10.5" font-weight="700">Catalog Service</text>
+        <text x="266" y="271" text-anchor="middle" fill="#8b949e" font-size="8.5">Python 3.11 · FastAPI 0.115</text>
+        <text x="266" y="282" text-anchor="middle" fill="#8b949e" font-size="8.5">SQLAlchemy · PyMySQL</text>
+        <text x="266" y="293" text-anchor="middle" fill="#39d353" font-size="8" font-weight="700">:8002</text>
+
+        <!-- Seating Service -->
+        <rect x="358" y="222" width="148" height="74" rx="7" fill="url(#gBlue)" stroke="#58a6ff" stroke-width="1.2" filter="url(#shadow)"/>
+        <text x="432" y="243" text-anchor="middle" fill="#58a6ff" font-size="14">💺</text>
+        <text x="432" y="258" text-anchor="middle" fill="#e6edf3" font-size="10.5" font-weight="700">Seating Service</text>
+        <text x="432" y="271" text-anchor="middle" fill="#8b949e" font-size="8.5">Node.js 20 · Express 4.21</text>
+        <text x="432" y="282" text-anchor="middle" fill="#8b949e" font-size="8.5">mysql2 · Hold TTL 15m</text>
+        <text x="432" y="293" text-anchor="middle" fill="#58a6ff" font-size="8" font-weight="700">:8003</text>
+
+        <!-- Order Service -->
+        <rect x="524" y="222" width="148" height="74" rx="7" fill="url(#gOrange)" stroke="#ffa657" stroke-width="1.2" filter="url(#shadow)"/>
+        <text x="598" y="243" text-anchor="middle" fill="#ffa657" font-size="14">📋</text>
+        <text x="598" y="258" text-anchor="middle" fill="#e6edf3" font-size="10.5" font-weight="700">Order Service</text>
+        <text x="598" y="271" text-anchor="middle" fill="#8b949e" font-size="8.5">Java 17 · Spring Boot 3.2.5</text>
+        <text x="598" y="282" text-anchor="middle" fill="#8b949e" font-size="8.5">Spring Data JPA · HikariCP</text>
+        <text x="598" y="293" text-anchor="middle" fill="#ffa657" font-size="8" font-weight="700">:8965</text>
+
+        <!-- Payment Service -->
+        <rect x="690" y="222" width="148" height="74" rx="7" fill="url(#gOrange)" stroke="#d29922" stroke-width="1.2" filter="url(#shadow)"/>
+        <text x="764" y="243" text-anchor="middle" fill="#d29922" font-size="14">💳</text>
+        <text x="764" y="258" text-anchor="middle" fill="#e6edf3" font-size="10.5" font-weight="700">Payment Service</text>
+        <text x="764" y="271" text-anchor="middle" fill="#8b949e" font-size="8.5">Java 17 · Spring Boot 3.2.5</text>
+        <text x="764" y="282" text-anchor="middle" fill="#8b949e" font-size="8.5">Spring Data JPA · HikariCP</text>
+        <text x="764" y="293" text-anchor="middle" fill="#d29922" font-size="8" font-weight="700">:9865</text>
+
+        <!-- Notification Service -->
+        <rect x="858" y="222" width="148" height="74" rx="7" fill="url(#gBlue)" stroke="#818cf8" stroke-width="1.2" filter="url(#shadow)"/>
+        <text x="932" y="243" text-anchor="middle" fill="#818cf8" font-size="14">📧</text>
+        <text x="932" y="258" text-anchor="middle" fill="#e6edf3" font-size="10.5" font-weight="700">Notification Service</text>
+        <text x="932" y="271" text-anchor="middle" fill="#8b949e" font-size="8.5">Node.js 20 · Express 4.18</text>
+        <text x="932" y="282" text-anchor="middle" fill="#8b949e" font-size="8.5">amqplib · nodemailer</text>
+        <text x="932" y="293" text-anchor="middle" fill="#818cf8" font-size="8" font-weight="700">:8006</text>
+
+        <!-- Ingress → Services (user, catalog, seating, order) -->
+        <path d="M430,172 L100,222" stroke="#58a6ff" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arrowBlue)" fill="none"/>
+        <path d="M460,172 L266,222" stroke="#58a6ff" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arrowBlue)" fill="none"/>
+        <path d="M490,172 L432,222" stroke="#58a6ff" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arrowBlue)" fill="none"/>
+        <path d="M530,172 L598,222" stroke="#58a6ff" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arrowBlue)" fill="none"/>
+        <path d="M570,172 L764,222" stroke="#58a6ff" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arrowBlue)" fill="none"/>
+
+        <!-- Order → Seating (OpenFeign sync) -->
+        <path d="M524,255 L506,255" stroke="#ffa657" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#arrowOrange)" fill="none"/>
+        <text x="515" y="248" text-anchor="middle" fill="#ffa657" font-size="7.5">OpenFeign</text>
+
+        <!-- Order → Catalog (OpenFeign sync) -->
+        <path d="M524,268 Q410,268 414,268" stroke="#ffa657" stroke-width="1" stroke-dasharray="3,2" fill="none"/>
+        <line x1="414" y1="268" x2="340" y2="268" stroke="#ffa657" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arrowOrange)"/>
+
+        <!-- ══════════════════════════════════════════════ -->
+        <!-- RABBITMQ -->
+        <!-- ══════════════════════════════════════════════ -->
+        <rect x="310" y="475" width="200" height="58" rx="8" fill="url(#gRabbit)" stroke="#ff8855" stroke-width="1.5" filter="url(#shadow)"/>
+        <text x="410" y="499" text-anchor="middle" fill="#ff8855" font-size="16">🐇</text>
+        <text x="410" y="516" text-anchor="middle" fill="#e6edf3" font-size="10.5" font-weight="700">RabbitMQ</text>
+        <text x="410" y="528" text-anchor="middle" fill="#8b949e" font-size="8.5">3.13-management · ticketing.exchange</text>
+
+        <!-- Order → RabbitMQ (publish ORDER_PLACED) -->
+        <path d="M598,296 L598,390 L410,390 L410,475" stroke="#ffa657" stroke-width="1.3" stroke-dasharray="4,2" marker-end="url(#arrowOrange)" fill="none"/>
+        <text x="490" y="386" text-anchor="middle" fill="#ffa657" font-size="8">ORDER_PLACED</text>
+
+        <!-- RabbitMQ → Payment (async payment request) -->
+        <path d="M510,505 Q620,505 690,290" stroke="#ff8855" stroke-width="1.3" stroke-dasharray="4,2" marker-end="url(#arrowDash)" fill="none"/>
+        <text x="625" y="400" text-anchor="middle" fill="#ff8855" font-size="8">payment.request</text>
+
+        <!-- Payment → RabbitMQ (publish PAYMENT_SUCCESS/FAILED) -->
+        <path d="M764,296 L764,450 L510,450 L510,475" stroke="#d29922" stroke-width="1.3" stroke-dasharray="4,2" marker-end="url(#arrowDash)" fill="none"/>
+        <text x="640" y="446" text-anchor="middle" fill="#d29922" font-size="8">PAYMENT_SUCCESS / FAILED</text>
+
+        <!-- RabbitMQ → Order (consume result) -->
+        <path d="M380,475 L380,450 L598,450 L598,296" stroke="#3fb950" stroke-width="1.2" stroke-dasharray="3,2" marker-end="url(#arrowGreen)" fill="none"/>
+
+        <!-- RabbitMQ → Notification (ORDER_CONFIRMED) -->
+        <path d="M510,505 Q710,540 858,270" stroke="#818cf8" stroke-width="1.2" stroke-dasharray="4,2" marker-end="url(#arrowDash)" fill="none"/>
+        <text x="720" y="490" text-anchor="middle" fill="#818cf8" font-size="8">ORDER_CONFIRMED → email</text>
+
+        <!-- ══════════════════════════════════════════════ -->
+        <!-- DATABASES -->
+        <!-- ══════════════════════════════════════════════ -->
+        <!-- user-db -->
+        <rect x="26" y="590" width="100" height="62" rx="6" fill="#1a2a1a" stroke="#3fb950" stroke-width="1" filter="url(#shadow)"/>
+        <text x="76" y="612" text-anchor="middle" fill="#3fb950" font-size="13">🗄️</text>
+        <text x="76" y="628" text-anchor="middle" fill="#e6edf3" font-size="9.5" font-weight="700">user_db</text>
+        <text x="76" y="641" text-anchor="middle" fill="#8b949e" font-size="8">MySQL 8.0</text>
+        <text x="76" y="651" text-anchor="middle" fill="#39d353" font-size="7.5">users · sessions</text>
+
+        <!-- catalog-db -->
+        <rect x="145" y="590" width="100" height="62" rx="6" fill="#1a2a1a" stroke="#39d353" stroke-width="1" filter="url(#shadow)"/>
+        <text x="195" y="612" text-anchor="middle" fill="#39d353" font-size="13">🗄️</text>
+        <text x="195" y="628" text-anchor="middle" fill="#e6edf3" font-size="9.5" font-weight="700">catalog_db</text>
+        <text x="195" y="641" text-anchor="middle" fill="#8b949e" font-size="8">MySQL 8.0</text>
+        <text x="195" y="651" text-anchor="middle" fill="#39d353" font-size="7.5">events · venues</text>
+
+        <!-- seating-db -->
+        <rect x="264" y="590" width="100" height="62" rx="6" fill="#1a2a20" stroke="#58a6ff" stroke-width="1" filter="url(#shadow)"/>
+        <text x="314" y="612" text-anchor="middle" fill="#58a6ff" font-size="13">🗄️</text>
+        <text x="314" y="628" text-anchor="middle" fill="#e6edf3" font-size="9.5" font-weight="700">seating_db</text>
+        <text x="314" y="641" text-anchor="middle" fill="#8b949e" font-size="8">MySQL 8.0</text>
+        <text x="314" y="651" text-anchor="middle" fill="#58a6ff" font-size="7.5">seats · holds</text>
+
+        <!-- order-db -->
+        <rect x="383" y="590" width="100" height="62" rx="6" fill="#2a1a0a" stroke="#ffa657" stroke-width="1" filter="url(#shadow)"/>
+        <text x="433" y="612" text-anchor="middle" fill="#ffa657" font-size="13">🗄️</text>
+        <text x="433" y="628" text-anchor="middle" fill="#e6edf3" font-size="9.5" font-weight="700">order_db</text>
+        <text x="433" y="641" text-anchor="middle" fill="#8b949e" font-size="8">PostgreSQL 16</text>
+        <text x="433" y="651" text-anchor="middle" fill="#ffa657" font-size="7.5">orders · tickets</text>
+
+        <!-- payment-db -->
+        <rect x="502" y="590" width="100" height="62" rx="6" fill="#2a1a00" stroke="#d29922" stroke-width="1" filter="url(#shadow)"/>
+        <text x="552" y="612" text-anchor="middle" fill="#d29922" font-size="13">🗄️</text>
+        <text x="552" y="628" text-anchor="middle" fill="#e6edf3" font-size="9.5" font-weight="700">payment_db</text>
+        <text x="552" y="641" text-anchor="middle" fill="#8b949e" font-size="8">PostgreSQL 16</text>
+        <text x="552" y="651" text-anchor="middle" fill="#d29922" font-size="7.5">payments · refunds</text>
+
+        <!-- notification-db -->
+        <rect x="621" y="590" width="100" height="62" rx="6" fill="#1a1a2a" stroke="#818cf8" stroke-width="1" filter="url(#shadow)"/>
+        <text x="671" y="612" text-anchor="middle" fill="#818cf8" font-size="13">🗄️</text>
+        <text x="671" y="628" text-anchor="middle" fill="#e6edf3" font-size="9.5" font-weight="700">notification_db</text>
+        <text x="671" y="641" text-anchor="middle" fill="#8b949e" font-size="8">MySQL 8.0</text>
+        <text x="671" y="651" text-anchor="middle" fill="#818cf8" font-size="7.5">notifications</text>
+
+        <!-- Service → DB lines -->
+        <line x1="100" y1="296" x2="76" y2="590" stroke="#3fb950" stroke-width="1" stroke-dasharray="2,2" marker-end="url(#arrowGreen)"/>
+        <line x1="266" y1="296" x2="195" y2="590" stroke="#39d353" stroke-width="1" stroke-dasharray="2,2" marker-end="url(#arrowGreen)"/>
+        <line x1="432" y1="296" x2="314" y2="590" stroke="#58a6ff" stroke-width="1" stroke-dasharray="2,2" marker-end="url(#arrowBlue)"/>
+        <line x1="598" y1="296" x2="433" y2="590" stroke="#ffa657" stroke-width="1" stroke-dasharray="2,2" marker-end="url(#arrowOrange)"/>
+        <line x1="764" y1="296" x2="552" y2="590" stroke="#d29922" stroke-width="1" stroke-dasharray="2,2" marker-end="url(#arrowDash)"/>
+        <line x1="932" y1="296" x2="671" y2="590" stroke="#818cf8" stroke-width="1" stroke-dasharray="2,2" marker-end="url(#arrowDash)"/>
+
+        <!-- ══════════════════════════════════════════════ -->
+        <!-- OBSERVABILITY -->
+        <!-- ══════════════════════════════════════════════ -->
+        <!-- Prometheus -->
+        <rect x="780" y="490" width="210" height="66" rx="8" fill="url(#gProm)" stroke="#e6522c" stroke-width="1.3" filter="url(#shadow)"/>
+        <text x="885" y="515" text-anchor="middle" fill="#e6522c" font-size="15">📊</text>
+        <text x="885" y="532" text-anchor="middle" fill="#e6edf3" font-size="10.5" font-weight="700">Prometheus</text>
+        <text x="885" y="544" text-anchor="middle" fill="#8b949e" font-size="8.5">v2.54.1 · scrape_interval: 15s</text>
+        <text x="885" y="556" text-anchor="middle" fill="#e6522c" font-size="8">6 targets · all UP · :9090</text>
+
+        <!-- Grafana -->
+        <rect x="780" y="578" width="210" height="60" rx="8" fill="#1a1f10" stroke="#f46800" stroke-width="1.3" filter="url(#shadow)"/>
+        <text x="885" y="602" text-anchor="middle" fill="#f46800" font-size="15">📈</text>
+        <text x="885" y="618" text-anchor="middle" fill="#e6edf3" font-size="10.5" font-weight="700">Grafana</text>
+        <text x="885" y="631" text-anchor="middle" fill="#8b949e" font-size="8.5">v11.2.0 · :3000 · datasource: Prometheus</text>
+
+        <!-- Prometheus scrapes all services (dashed lines) -->
+        <path d="M780,510 Q600,380 764,296" stroke="#e6522c" stroke-width="0.9" stroke-dasharray="3,3" fill="none"/>
+        <path d="M780,510 Q650,370 598,296" stroke="#e6522c" stroke-width="0.9" stroke-dasharray="3,3" fill="none"/>
+        <path d="M780,510 Q560,380 432,296" stroke="#e6522c" stroke-width="0.9" stroke-dasharray="3,3" fill="none"/>
+        <path d="M780,510 Q500,420 266,296" stroke="#e6522c" stroke-width="0.9" stroke-dasharray="3,3" fill="none"/>
+        <path d="M780,510 Q440,450 100,296" stroke="#e6522c" stroke-width="0.9" stroke-dasharray="3,3" fill="none"/>
+        <path d="M895,490 L932,296" stroke="#e6522c" stroke-width="0.9" stroke-dasharray="3,3" fill="none"/>
+        <text x="800" y="430" fill="#e6522c" font-size="8" transform="rotate(-45 800 430)">scrapes /metrics</text>
+
+        <!-- Prometheus → Grafana -->
+        <line x1="885" y1="556" x2="885" y2="578" stroke="#f46800" stroke-width="1.3" marker-end="url(#arrowDash)"/>
+
+        <!-- ══════════════════════════════════════════════ -->
+        <!-- LEGEND -->
+        <!-- ══════════════════════════════════════════════ -->
+        <rect x="26" y="700" width="720" height="62" rx="6" fill="none" stroke="#30363d" stroke-dasharray="2,2"/>
+        <text x="40" y="716" fill="#8b949e" font-size="9" font-weight="700">LEGEND</text>
+        <!-- sync -->
+        <line x1="40" y1="730" x2="80" y2="730" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#arrowBlue)"/>
+        <text x="86" y="734" fill="#8b949e" font-size="9">HTTP / REST (sync)</text>
+        <!-- async -->
+        <line x1="180" y1="730" x2="220" y2="730" stroke="#ffa657" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#arrowOrange)"/>
+        <text x="226" y="734" fill="#8b949e" font-size="9">AMQP (async, RabbitMQ)</text>
+        <!-- feign -->
+        <line x1="360" y1="730" x2="400" y2="730" stroke="#ffa657" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#arrowOrange)"/>
+        <text x="406" y="734" fill="#8b949e" font-size="9">OpenFeign (sync inter-service)</text>
+        <!-- prometheus -->
+        <line x1="545" y1="730" x2="585" y2="730" stroke="#e6522c" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="591" y="734" fill="#8b949e" font-size="9">Prometheus scrape</text>
+
+        <!-- DB types -->
+        <rect x="40" y="745" width="8" height="8" rx="2" fill="#3fb950"/>
+        <text x="54" y="753" fill="#8b949e" font-size="9">MySQL 8.0 (user, catalog, seating, notification)</text>
+        <rect x="290" y="745" width="8" height="8" rx="2" fill="#ffa657"/>
+        <text x="304" y="753" fill="#8b949e" font-size="9">PostgreSQL 16 (order, payment)</text>
+        <rect x="490" y="745" width="8" height="8" rx="2" fill="#ff8855"/>
+        <text x="504" y="753" fill="#8b949e" font-size="9">RabbitMQ 3.13 message broker</text>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ── DATA FLOW ── -->
+  <section id="dataflow">
+    <h2>Request Data Flow</h2>
+    <p>All external traffic enters through the <strong>Nginx Ingress Controller</strong>. The React SPA is served by Nginx on port 3001. API calls from the frontend are proxied through Nginx to the appropriate microservice. Inter-service communication uses two patterns:</p>
+    <div class="pill-row">
+      <span class="pill">🔄 Synchronous: OpenFeign (Order→Catalog, Order→Seating) + Axios (Node.js)</span>
+      <span class="pill">📨 Asynchronous: RabbitMQ AMQP (Order↔Payment↔Notification)</span>
+    </div>
+
+    <h3>Message Broker Topology</h3>
+    <table class="tbl">
+      <thead><tr><th>Exchange</th><th>Routing Key</th><th>Queue</th><th>Producer</th><th>Consumer</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">ticketing.exchange</td><td class="mono">order.payment.request</td><td class="mono">order.payment.request</td><td>Order Service (outbox)</td><td>Payment Service</td></tr>
+        <tr><td class="mono">ticketing.exchange</td><td class="mono">order.payment.result</td><td class="mono">order.payment.request.result</td><td>Payment Service (outbox)</td><td>Order Service</td></tr>
+        <tr><td class="mono">ticketing.exchange</td><td class="mono">order.events</td><td class="mono">order.events</td><td>Order Service</td><td>Notification Service</td></tr>
+      </tbody>
+    </table>
+
+    <div class="infobox orange">
+      <strong>Outbox Pattern:</strong> Both Order Service and Payment Service use the transactional outbox pattern. Events are written to an <code>outbox</code> table within the same database transaction as the business operation. A scheduler polls and publishes unpublished events to RabbitMQ, guaranteeing at-least-once delivery without distributed transactions.
+    </div>
+  </section>
+
+  <!-- ── SERVICE CARDS ── -->
+  <section id="frontend">
+    <h2>Frontend</h2>
+    <div class="svc-card" style="max-width:680px">
+      <div class="svc-card-header">
+        <span class="svc-icon">⚛️</span>
+        <div><div class="svc-name">Frontend SPA</div><div class="svc-sub">React 18 · Vite 5 · Nginx Alpine</div></div>
+        <div class="svc-port">:3001</div>
+      </div>
+      <div class="svc-body">
+        <div class="kv-row"><div class="kv-key">Framework</div><div class="kv-val">React <code>18.3.1</code> with functional components and hooks</div></div>
+        <div class="kv-row"><div class="kv-key">Build tool</div><div class="kv-val">Vite <code>5.4.8</code> — fast HMR in dev, Rollup bundling for prod</div></div>
+        <div class="kv-row"><div class="kv-key">Routing</div><div class="kv-val">React Router DOM <code>6.26.2</code> — client-side SPA navigation</div></div>
+        <div class="kv-row"><div class="kv-key">Data fetching</div><div class="kv-val">TanStack Query (React Query) <code>5.56.2</code> — caching, background refetch, optimistic updates</div></div>
+        <div class="kv-row"><div class="kv-key">HTTP client</div><div class="kv-val">Axios <code>1.7.7</code></div></div>
+        <div class="kv-row"><div class="kv-key">Styling</div><div class="kv-val">Tailwind CSS <code>3.4.13</code> + PostCSS <code>8.4.47</code></div></div>
+        <div class="kv-row"><div class="kv-key">Icons</div><div class="kv-val">Lucide React <code>0.462.0</code></div></div>
+        <div class="kv-row"><div class="kv-key">Web server</div><div class="kv-val">Nginx Alpine (serves static build, SPA fallback config)</div></div>
+        <div class="kv-row"><div class="kv-key">Container</div><div class="kv-val">Multi-stage: <code>node:20-alpine</code> builder → <code>nginx:alpine</code> runtime</div></div>
+        <div class="kv-row"><div class="kv-key">Key pages</div><div class="kv-val">Events, Event Detail (seat grid), Login/Register, Orders, Profile, Notifications, Admin dashboard</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── SERVICES GRID ── -->
+  <section id="user-service">
+    <h2>Microservices</h2>
+    <div class="svc-grid">
+
+      <!-- USER SERVICE -->
+      <div class="svc-card">
+        <div class="svc-card-header">
+          <span class="svc-icon">👤</span>
+          <div><div class="svc-name">User Service</div><div class="svc-sub">Authentication & User Management</div></div>
+          <div class="svc-port">:8001</div>
+        </div>
+        <div class="svc-body">
+          <div class="kv-row"><div class="kv-key">Language</div><div class="kv-val"><span class="tag python">Python 3.11</span></div></div>
+          <div class="kv-row"><div class="kv-key">Framework</div><div class="kv-val">FastAPI <code>0.115.0</code></div></div>
+          <div class="kv-row"><div class="kv-key">ASGI server</div><div class="kv-val">Uvicorn <code>0.30.6</code></div></div>
+          <div class="kv-row"><div class="kv-key">Database</div><div class="kv-val"><span class="tag mysql">MySQL 8.0</span> user_db</div></div>
+          <div class="kv-row"><div class="kv-key">ORM</div><div class="kv-val">SQLAlchemy <code>2.0.34</code></div></div>
+          <div class="kv-row"><div class="kv-key">DB driver</div><div class="kv-val">PyMySQL <code>1.1.1</code></div></div>
+          <div class="kv-row"><div class="kv-key">Auth</div><div class="kv-val">BCrypt via passlib <code>1.7.4</code></div></div>
+          <div class="kv-row"><div class="kv-key">Validation</div><div class="kv-val">Pydantic <code>2.9.2</code> + email-validator <code>2.2.0</code></div></div>
+          <div class="kv-row"><div class="kv-key">Logging</div><div class="kv-val">python-json-logger <code>2.0.7</code> · structured JSON</div></div>
+          <div class="kv-row"><div class="kv-key">Metrics</div><div class="kv-val">prometheus-client <code>0.20.0</code> · <code>/metrics</code></div></div>
+          <div class="kv-row"><div class="kv-key">Tracing</div><div class="kv-val">X-Correlation-Id middleware (HTTP)</div></div>
+          <div class="kv-row"><div class="kv-key">Container</div><div class="kv-val">python:3.11-slim</div></div>
+          <div class="kv-row"><div class="kv-key">Key metrics</div><div class="kv-val"><code>users_registered_total</code>, <code>auth_failures_total</code></div></div>
+        </div>
+      </div>
+
+      <!-- CATALOG SERVICE -->
+      <div class="svc-card" id="catalog-service">
+        <div class="svc-card-header">
+          <span class="svc-icon">🗓️</span>
+          <div><div class="svc-name">Catalog Service</div><div class="svc-sub">Events & Venues</div></div>
+          <div class="svc-port">:8002</div>
+        </div>
+        <div class="svc-body">
+          <div class="kv-row"><div class="kv-key">Language</div><div class="kv-val"><span class="tag python">Python 3.11</span></div></div>
+          <div class="kv-row"><div class="kv-key">Framework</div><div class="kv-val">FastAPI <code>0.115.0</code></div></div>
+          <div class="kv-row"><div class="kv-key">ASGI server</div><div class="kv-val">Uvicorn <code>0.30.6</code></div></div>
+          <div class="kv-row"><div class="kv-key">Database</div><div class="kv-val"><span class="tag mysql">MySQL 8.0</span> catalog_db</div></div>
+          <div class="kv-row"><div class="kv-key">ORM</div><div class="kv-val">SQLAlchemy <code>2.0.34</code></div></div>
+          <div class="kv-row"><div class="kv-key">DB driver</div><div class="kv-val">PyMySQL <code>1.1.1</code></div></div>
+          <div class="kv-row"><div class="kv-key">Validation</div><div class="kv-val">Pydantic <code>2.9.2</code></div></div>
+          <div class="kv-row"><div class="kv-key">Logging</div><div class="kv-val">python-json-logger <code>2.0.7</code></div></div>
+          <div class="kv-row"><div class="kv-key">Metrics</div><div class="kv-val">prometheus-client <code>0.20.0</code> · <code>catalog_lookups_total{resource}</code></div></div>
+          <div class="kv-row"><div class="kv-key">Tracing</div><div class="kv-val">X-Correlation-Id middleware</div></div>
+          <div class="kv-row"><div class="kv-key">Container</div><div class="kv-val">python:3.11-slim</div></div>
+        </div>
+      </div>
+
+      <!-- SEATING SERVICE -->
+      <div class="svc-card" id="seating-service">
+        <div class="svc-card-header">
+          <span class="svc-icon">💺</span>
+          <div><div class="svc-name">Seating Service</div><div class="svc-sub">Seat Inventory & Hold Management</div></div>
+          <div class="svc-port">:8003</div>
+        </div>
+        <div class="svc-body">
+          <div class="kv-row"><div class="kv-key">Language</div><div class="kv-val"><span class="tag node">Node.js 20</span></div></div>
+          <div class="kv-row"><div class="kv-key">Framework</div><div class="kv-val">Express <code>4.21.0</code></div></div>
+          <div class="kv-row"><div class="kv-key">Database</div><div class="kv-val"><span class="tag mysql">MySQL 8.0</span> seating_db</div></div>
+          <div class="kv-row"><div class="kv-key">DB driver</div><div class="kv-val">mysql2/promise <code>3.11.0</code></div></div>
+          <div class="kv-row"><div class="kv-key">HTTP client</div><div class="kv-val">Axios <code>1.7.7</code></div></div>
+          <div class="kv-row"><div class="kv-key">Logging</div><div class="kv-val">Pino <code>9.4.0</code> + pino-http <code>10.3.0</code></div></div>
+          <div class="kv-row"><div class="kv-key">Metrics</div><div class="kv-val">prom-client <code>15.1.3</code> · <code>seat_reservations_total</code>, <code>seat_reservations_failed</code>, <code>seat_holds_active</code></div></div>
+          <div class="kv-row"><div class="kv-key">Tracing</div><div class="kv-val">pinoHttp <code>genReqId</code> reads <code>x-correlation-id</code> header</div></div>
+          <div class="kv-row"><div class="kv-key">Hold TTL</div><div class="kv-val">15 minutes (configurable via <code>HOLD_TTL_MIN</code>). Cron job cleans expired holds every 60s.</div></div>
+          <div class="kv-row"><div class="kv-key">Container</div><div class="kv-val">node:20-alpine</div></div>
+        </div>
+      </div>
+
+      <!-- ORDER SERVICE -->
+      <div class="svc-card" id="order-service">
+        <div class="svc-card-header">
+          <span class="svc-icon">📋</span>
+          <div><div class="svc-name">Order Service</div><div class="svc-sub">Order Lifecycle & Ticket Generation</div></div>
+          <div class="svc-port">:8965</div>
+        </div>
+        <div class="svc-body">
+          <div class="kv-row"><div class="kv-key">Language</div><div class="kv-val"><span class="tag java">Java 17</span></div></div>
+          <div class="kv-row"><div class="kv-key">Framework</div><div class="kv-val">Spring Boot <code>3.2.5</code></div></div>
+          <div class="kv-row"><div class="kv-key">Build tool</div><div class="kv-val">Maven 3.9 (multi-stage Docker)</div></div>
+          <div class="kv-row"><div class="kv-key">Database</div><div class="kv-val"><span class="tag pg">PostgreSQL 16</span> order_db</div></div>
+          <div class="kv-row"><div class="kv-key">ORM</div><div class="kv-val">Spring Data JPA / Hibernate</div></div>
+          <div class="kv-row"><div class="kv-key">DB pool</div><div class="kv-val">HikariCP · max 10 conn · min 2 idle</div></div>
+          <div class="kv-row"><div class="kv-key">Messaging</div><div class="kv-val"><span class="tag rabbit">RabbitMQ</span> spring-boot-starter-amqp</div></div>
+          <div class="kv-row"><div class="kv-key">HTTP client</div><div class="kv-val">Spring Cloud OpenFeign (→ Seating, Catalog)</div></div>
+          <div class="kv-row"><div class="kv-key">Metrics</div><div class="kv-val">Micrometer → Prometheus · <code>orders_placed_total</code>, <code>orders_confirmed_total</code>, <code>orders_payment_failed_total</code></div></div>
+          <div class="kv-row"><div class="kv-key">Logging</div><div class="kv-val">Logback + logstash-logback-encoder <code>7.4</code> · JSON with MDC</div></div>
+          <div class="kv-row"><div class="kv-key">Tracing</div><div class="kv-val">CorrelationIdFilter → MDC · correlationId field in all logs</div></div>
+          <div class="kv-row"><div class="kv-key">API docs</div><div class="kv-val">springdoc-openapi <code>2.5.0</code> · Swagger UI at <code>/swagger-ui.html</code></div></div>
+          <div class="kv-row"><div class="kv-key">Tax rate</div><div class="kv-val">5% applied at order creation</div></div>
+          <div class="kv-row"><div class="kv-key">Container</div><div class="kv-val">eclipse-temurin:17-jre-jammy</div></div>
+        </div>
+      </div>
+
+      <!-- PAYMENT SERVICE -->
+      <div class="svc-card" id="payment-service">
+        <div class="svc-card-header">
+          <span class="svc-icon">💳</span>
+          <div><div class="svc-name">Payment Service</div><div class="svc-sub">Payment Processing & Refunds</div></div>
+          <div class="svc-port">:9865</div>
+        </div>
+        <div class="svc-body">
+          <div class="kv-row"><div class="kv-key">Language</div><div class="kv-val"><span class="tag java">Java 17</span></div></div>
+          <div class="kv-row"><div class="kv-key">Framework</div><div class="kv-val">Spring Boot <code>3.2.5</code></div></div>
+          <div class="kv-row"><div class="kv-key">Build tool</div><div class="kv-val">Maven 3.9 (multi-stage Docker)</div></div>
+          <div class="kv-row"><div class="kv-key">Database</div><div class="kv-val"><span class="tag pg">PostgreSQL 16</span> payment_db</div></div>
+          <div class="kv-row"><div class="kv-key">ORM</div><div class="kv-val">Spring Data JPA / Hibernate</div></div>
+          <div class="kv-row"><div class="kv-key">DB pool</div><div class="kv-val">HikariCP · max 10 conn · min 2 idle</div></div>
+          <div class="kv-row"><div class="kv-key">Messaging</div><div class="kv-val"><span class="tag rabbit">RabbitMQ</span> consumes <code>order.payment.request</code>, publishes result</div></div>
+          <div class="kv-row"><div class="kv-key">Gateway</div><div class="kv-val">Simulated gateway · ~98% success rate</div></div>
+          <div class="kv-row"><div class="kv-key">Methods</div><div class="kv-val">UPI, CREDIT_CARD, DEBIT_CARD, NET_BANKING</div></div>
+          <div class="kv-row"><div class="kv-key">Metrics</div><div class="kv-val">Micrometer → <code>payments_processed_total{status}</code>, <code>payments_failed_total</code></div></div>
+          <div class="kv-row"><div class="kv-key">Logging</div><div class="kv-val">Logback + logstash-logback-encoder <code>7.4</code> · JSON with MDC</div></div>
+          <div class="kv-row"><div class="kv-key">Tracing</div><div class="kv-val">CorrelationIdFilter → MDC · correlationId in all log lines</div></div>
+          <div class="kv-row"><div class="kv-key">Idempotency</div><div class="kv-val">Idempotency-Key header + DB unique constraint</div></div>
+          <div class="kv-row"><div class="kv-key">Container</div><div class="kv-val">eclipse-temurin:17-jre-jammy</div></div>
+        </div>
+      </div>
+
+      <!-- NOTIFICATION SERVICE -->
+      <div class="svc-card" id="notification-service">
+        <div class="svc-card-header">
+          <span class="svc-icon">📧</span>
+          <div><div class="svc-name">Notification Service</div><div class="svc-sub">Email Notifications via RabbitMQ</div></div>
+          <div class="svc-port">:8006</div>
+        </div>
+        <div class="svc-body">
+          <div class="kv-row"><div class="kv-key">Language</div><div class="kv-val"><span class="tag node">Node.js 20</span></div></div>
+          <div class="kv-row"><div class="kv-key">Framework</div><div class="kv-val">Express <code>4.18.2</code></div></div>
+          <div class="kv-row"><div class="kv-key">Database</div><div class="kv-val"><span class="tag mysql">MySQL 8.0</span> notification_db</div></div>
+          <div class="kv-row"><div class="kv-key">DB driver</div><div class="kv-val">mysql2/promise <code>3.9.0</code></div></div>
+          <div class="kv-row"><div class="kv-key">Messaging</div><div class="kv-val"><span class="tag rabbit">RabbitMQ</span> amqplib <code>0.10.4</code> · consumes <code>order.events</code></div></div>
+          <div class="kv-row"><div class="kv-key">Email</div><div class="kv-val">nodemailer <code>6.9.13</code> · Gmail SMTP (optional)</div></div>
+          <div class="kv-row"><div class="kv-key">HTTP client</div><div class="kv-val">Axios <code>1.7.2</code> (calls Order, User, Catalog APIs to enrich notifications)</div></div>
+          <div class="kv-row"><div class="kv-key">Logging</div><div class="kv-val">Pino <code>8.0.0</code> + pino-http <code>8.0.0</code></div></div>
+          <div class="kv-row"><div class="kv-key">Metrics</div><div class="kv-val">prom-client <code>14.0.0</code> · <code>notifications_sent_total{channel,status}</code></div></div>
+          <div class="kv-row"><div class="kv-key">Container</div><div class="kv-val">node:20-alpine</div></div>
+        </div>
+      </div>
+
+    </div><!-- /svc-grid -->
+  </section>
+
+  <!-- ── DATABASES ── -->
+  <section id="databases">
+    <h2>Databases</h2>
+    <div class="infobox blue">
+      <strong>Database-per-Service Pattern:</strong> Each microservice owns exactly one database. No service accesses another service's database directly. All cross-service data access happens via HTTP API or message broker.
+    </div>
+
+    <table class="tbl">
+      <thead><tr><th>Service</th><th>Database</th><th>Engine</th><th>Version</th><th>Key Tables</th></tr></thead>
+      <tbody>
+        <tr><td>user-service</td><td class="mono">user_db</td><td>MySQL</td><td class="green">8.0</td><td class="muted">users</td></tr>
+        <tr><td>catalog-service</td><td class="mono">catalog_db</td><td>MySQL</td><td class="green">8.0</td><td class="muted">venues, events</td></tr>
+        <tr><td>seating-service</td><td class="mono">seating_db</td><td>MySQL</td><td class="green">8.0</td><td class="muted">seats, seat_holds</td></tr>
+        <tr><td>notification-service</td><td class="mono">notification_db</td><td>MySQL</td><td class="green">8.0</td><td class="muted">notifications</td></tr>
+        <tr><td>order-service</td><td class="mono">order_db</td><td>PostgreSQL</td><td class="green">16-alpine</td><td class="muted">orders, order_seats, tickets, order_outbox</td></tr>
+        <tr><td>payment-service</td><td class="mono">payment_db</td><td>PostgreSQL</td><td class="green">16-alpine</td><td class="muted">payments, refunds, payment_outbox</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Connection Pooling</h3>
+    <p>Spring Boot services (order, payment) use <strong>HikariCP</strong> — maximum 10 connections, minimum 2 idle. Python services use SQLAlchemy's built-in connection pool. Node.js services use mysql2's native pool.</p>
+  </section>
+
+  <!-- ── MESSAGING ── -->
+  <section id="messaging">
+    <h2>Messaging — RabbitMQ</h2>
+    <div class="kv-row"><div class="kv-key">Version</div><div class="kv-val">RabbitMQ <code>3.13-management-alpine</code></div></div>
+    <div class="kv-row"><div class="kv-key">Protocol</div><div class="kv-val">AMQP 0-9-1</div></div>
+    <div class="kv-row"><div class="kv-key">Exchange</div><div class="kv-val"><code>ticketing.exchange</code> (topic exchange)</div></div>
+    <div class="kv-row"><div class="kv-key">Management UI</div><div class="kv-val">Port 15672 (NodePort 30672 in Kubernetes)</div></div>
+
+    <div class="infobox green">
+      <strong>Transactional Outbox Pattern:</strong> Business events are committed to an <code>outbox</code> table atomically with domain changes. A scheduled publisher thread reads unpublished rows and delivers them to RabbitMQ, then marks them published. This prevents message loss on service crash between DB commit and broker publish.
+    </div>
+  </section>
+
+  <!-- ── KUBERNETES ── -->
+  <section id="kubernetes">
+    <h2>Kubernetes Deployment</h2>
+    <div class="kv-row"><div class="kv-key">Namespace</div><div class="kv-val"><code>seatsavvy</code></div></div>
+    <div class="kv-row"><div class="kv-key">Cluster</div><div class="kv-val">Minikube (local) / any K8s cluster</div></div>
+    <div class="kv-row"><div class="kv-key">Ingress</div><div class="kv-val">Nginx Ingress Controller · hostname: <code>seatsavvy.local</code></div></div>
+    <div class="kv-row"><div class="kv-key">Image pull</div><div class="kv-val"><code>imagePullPolicy: Never</code> (local Minikube daemon)</div></div>
+    <div class="kv-row"><div class="kv-key">Storage</div><div class="kv-val">PersistentVolumeClaims for all 6 databases + RabbitMQ</div></div>
+
+    <h3>Resource Limits</h3>
+    <table class="tbl">
+      <thead><tr><th>Service Type</th><th>CPU Request</th><th>CPU Limit</th><th>Memory Request</th><th>Memory Limit</th></tr></thead>
+      <tbody>
+        <tr><td>Python / Node.js services</td><td>100m</td><td>300m</td><td>128Mi</td><td>256Mi</td></tr>
+        <tr><td>Java services (Order, Payment)</td><td>250m</td><td>750m</td><td>512Mi</td><td>768Mi</td></tr>
+        <tr><td>Databases (MySQL, PostgreSQL)</td><td>100m</td><td>500m</td><td>256Mi</td><td>512Mi</td></tr>
+        <tr><td>RabbitMQ</td><td>250m</td><td>500m</td><td>256Mi</td><td>512Mi</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Health Probes</h3>
+    <table class="tbl">
+      <thead><tr><th>Service</th><th>Probe endpoint</th><th>Initial delay</th><th>Period</th></tr></thead>
+      <tbody>
+        <tr><td>Python services</td><td class="mono">GET /health</td><td>15s</td><td>10s</td></tr>
+        <tr><td>Node.js services</td><td class="mono">GET /health</td><td>15–20s</td><td>10s</td></tr>
+        <tr><td>Java services</td><td class="mono">GET /actuator/health</td><td>60–90s</td><td>15–30s</td></tr>
+        <tr><td>MySQL</td><td class="mono">mysqladmin ping</td><td>30s</td><td>10s</td></tr>
+        <tr><td>PostgreSQL</td><td class="mono">pg_isready</td><td>20s</td><td>10s</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Secrets & Config</h3>
+    <div class="pill-row">
+      <span class="pill">mysql-secret</span>
+      <span class="pill">order-db-secret</span>
+      <span class="pill">payment-db-secret</span>
+      <span class="pill">rabbitmq-secret</span>
+      <span class="pill">smtp-secret</span>
+      <span class="pill">app-config (ConfigMap)</span>
+    </div>
+  </section>
+
+  <!-- ── OBSERVABILITY ── -->
+  <section id="observability">
+    <h2>Observability</h2>
+
+    <h3>Metrics — Prometheus + Grafana</h3>
+    <table class="tbl">
+      <thead><tr><th>Service</th><th>Endpoint</th><th>Key Custom Metrics</th></tr></thead>
+      <tbody>
+        <tr><td>user-service</td><td class="mono">/metrics</td><td class="muted">users_registered_total, auth_failures_total</td></tr>
+        <tr><td>catalog-service</td><td class="mono">/metrics</td><td class="muted">catalog_lookups_total{resource}</td></tr>
+        <tr><td>seating-service</td><td class="mono">/metrics</td><td class="muted">seat_reservations_total, seat_reservations_failed, seat_holds_active</td></tr>
+        <tr><td>order-service</td><td class="mono">/actuator/prometheus</td><td class="muted">orders_placed_total, orders_confirmed_total, orders_payment_failed_total</td></tr>
+        <tr><td>payment-service</td><td class="mono">/actuator/prometheus</td><td class="muted">payments_processed_total{status}, payments_failed_total</td></tr>
+        <tr><td>notification-service</td><td class="mono">/metrics</td><td class="muted">notifications_sent_total{channel,status}</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Structured Logging</h3>
+    <table class="tbl">
+      <thead><tr><th>Service</th><th>Library</th><th>Format</th><th>Correlation ID field</th></tr></thead>
+      <tbody>
+        <tr><td>user-service, catalog-service</td><td>python-json-logger 2.0.7</td><td>JSON</td><td class="mono">cid</td></tr>
+        <tr><td>seating-service, notification-service</td><td>Pino 8–9 + pino-http</td><td>JSON (ndjson)</td><td class="mono">cid / req.id</td></tr>
+        <tr><td>order-service, payment-service</td><td>logstash-logback-encoder 7.4</td><td>JSON (Logstash)</td><td class="mono">correlationId (MDC)</td></tr>
+      </tbody>
+    </table>
+    <p>All services propagate <strong>X-Correlation-Id</strong> HTTP header. Spring Boot services use a <code>CorrelationIdFilter</code> (OncePerRequestFilter) + SLF4J MDC so the correlation ID appears automatically in every log line within the request thread.</p>
+  </section>
+
+  <!-- ── TECH MATRIX ── -->
+  <section id="tech-matrix">
+    <h2>Technology Matrix</h2>
+    <table class="tbl">
+      <thead><tr><th>Component</th><th>Technology</th><th>Version</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>Python Runtime</td><td>CPython</td><td class="green">3.11</td><td>user-service, catalog-service</td></tr>
+        <tr><td>FastAPI</td><td>ASGI framework</td><td class="green">0.115.0</td><td>REST APIs for Python services</td></tr>
+        <tr><td>Uvicorn</td><td>ASGI server</td><td class="green">0.30.6</td><td>Runs FastAPI in production</td></tr>
+        <tr><td>SQLAlchemy</td><td>Python ORM</td><td class="green">2.0.34</td><td>DB access in Python services</td></tr>
+        <tr><td>Pydantic</td><td>Validation</td><td class="green">2.9.2</td><td>Request/response validation</td></tr>
+        <tr><td>passlib + bcrypt</td><td>Auth</td><td class="green">1.7.4</td><td>Password hashing</td></tr>
+        <tr><td>Node.js Runtime</td><td>V8</td><td class="green">20 LTS</td><td>seating-service, notification-service</td></tr>
+        <tr><td>Express.js</td><td>HTTP framework</td><td class="green">4.18–4.21</td><td>REST APIs for Node.js services</td></tr>
+        <tr><td>Pino</td><td>JSON logger</td><td class="green">8–9</td><td>Structured logging (Node.js)</td></tr>
+        <tr><td>amqplib</td><td>AMQP client</td><td class="green">0.10.4</td><td>RabbitMQ consumer (notification)</td></tr>
+        <tr><td>nodemailer</td><td>Email</td><td class="green">6.9.13</td><td>Gmail SMTP for confirmations</td></tr>
+        <tr><td>Java Runtime</td><td>OpenJDK (Temurin)</td><td class="green">17 LTS</td><td>order-service, payment-service</td></tr>
+        <tr><td>Spring Boot</td><td>Java framework</td><td class="green">3.2.5</td><td>REST, JPA, AMQP, Actuator</td></tr>
+        <tr><td>Spring Data JPA</td><td>ORM abstraction</td><td class="green">via SB 3.2.5</td><td>DB access in Java services</td></tr>
+        <tr><td>HikariCP</td><td>Connection pool</td><td class="green">via SB 3.2.5</td><td>PostgreSQL pooling</td></tr>
+        <tr><td>Spring Cloud OpenFeign</td><td>HTTP client</td><td class="green">2023.0.1</td><td>Declarative service calls</td></tr>
+        <tr><td>Micrometer</td><td>Metrics facade</td><td class="green">via SB 3.2.5</td><td>Custom counters for Prometheus</td></tr>
+        <tr><td>logstash-logback-encoder</td><td>JSON logging</td><td class="green">7.4</td><td>Structured JSON + MDC fields</td></tr>
+        <tr><td>springdoc-openapi</td><td>API docs</td><td class="green">2.5.0</td><td>Swagger UI at /swagger-ui.html</td></tr>
+        <tr><td>React</td><td>UI library</td><td class="green">18.3.1</td><td>Frontend SPA</td></tr>
+        <tr><td>Vite</td><td>Build tool</td><td class="green">5.4.8</td><td>Frontend bundler + dev server</td></tr>
+        <tr><td>TanStack Query</td><td>State management</td><td class="green">5.56.2</td><td>Server state, caching</td></tr>
+        <tr><td>Tailwind CSS</td><td>CSS framework</td><td class="green">3.4.13</td><td>Utility-first styling</td></tr>
+        <tr><td>MySQL</td><td>RDBMS</td><td class="green">8.0</td><td>user, catalog, seating, notification DBs</td></tr>
+        <tr><td>PostgreSQL</td><td>RDBMS</td><td class="green">16-alpine</td><td>order, payment DBs</td></tr>
+        <tr><td>RabbitMQ</td><td>Message broker</td><td class="green">3.13</td><td>Async event bus</td></tr>
+        <tr><td>Prometheus</td><td>Metrics store</td><td class="green">2.54.1</td><td>Scrapes all service /metrics</td></tr>
+        <tr><td>Grafana</td><td>Visualization</td><td class="green">11.2.0</td><td>Dashboards over Prometheus</td></tr>
+        <tr><td>Nginx</td><td>Web server / proxy</td><td class="green">alpine</td><td>Frontend serving + K8s ingress</td></tr>
+        <tr><td>Kubernetes</td><td>Orchestration</td><td class="green">1.35 (Minikube)</td><td>Container scheduling, services, ingress</td></tr>
+        <tr><td>Docker</td><td>Container runtime</td><td class="muted">latest</td><td>Image build and Minikube daemon</td></tr>
+        <tr><td>Maven</td><td>Build tool (Java)</td><td class="green">3.9</td><td>Java service compilation and packaging</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ── API ENDPOINTS ── -->
+  <section id="api-endpoints">
+    <h2>API Endpoints Summary</h2>
+    <table class="tbl">
+      <thead><tr><th>Service</th><th>Method</th><th>Path</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td rowspan="3">User Service</td><td>POST</td><td class="mono">/v1/users</td><td>Register new user</td></tr>
+        <tr><td>POST</td><td class="mono">/v1/users/login</td><td>Login (returns user object)</td></tr>
+        <tr><td>GET</td><td class="mono">/v1/users/{id}</td><td>Get user by ID</td></tr>
+        <tr><td rowspan="2">Catalog Service</td><td>GET</td><td class="mono">/v1/events</td><td>List events (paginated)</td></tr>
+        <tr><td>GET</td><td class="mono">/v1/events/{id}</td><td>Event detail</td></tr>
+        <tr><td rowspan="3">Seating Service</td><td>GET</td><td class="mono">/v1/seats/{eventId}</td><td>Seat map for event</td></tr>
+        <tr><td>POST</td><td class="mono">/v1/seats/hold</td><td>Place a seat hold (TTL 15m)</td></tr>
+        <tr><td>POST</td><td class="mono">/v1/seats/reserve</td><td>Confirm reservation</td></tr>
+        <tr><td rowspan="4">Order Service</td><td>POST</td><td class="mono">/v1/orders</td><td>Place order</td></tr>
+        <tr><td>GET</td><td class="mono">/v1/orders/{id}</td><td>Get order</td></tr>
+        <tr><td>GET</td><td class="mono">/v1/orders/user/{userId}</td><td>Orders by user</td></tr>
+        <tr><td>POST</td><td class="mono">/v1/orders/{id}/confirm</td><td>Confirm order (internal/test)</td></tr>
+        <tr><td rowspan="3">Payment Service</td><td>POST</td><td class="mono">/v1/payments/charge</td><td>Charge payment (+ Idempotency-Key header)</td></tr>
+        <tr><td>POST</td><td class="mono">/v1/payments/{id}/refund</td><td>Refund payment</td></tr>
+        <tr><td>GET</td><td class="mono">/v1/payments/order/{orderId}</td><td>Payment by order</td></tr>
+        <tr><td rowspan="2">Notification Service</td><td>GET</td><td class="mono">/v1/notifications/user/{id}</td><td>Notifications for user</td></tr>
+        <tr><td>GET</td><td class="mono">/v1/notifications/stats</td><td>Notification stats</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ── PATTERNS ── -->
+  <section id="patterns">
+    <h2>Design Patterns & Practices</h2>
+    <table class="tbl">
+      <thead><tr><th>Pattern</th><th>Where Applied</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Database-per-Service</strong></td><td>All 6 services</td><td>Loose coupling; each service owns its schema and can evolve independently</td></tr>
+        <tr><td><strong>Transactional Outbox</strong></td><td>Order Service, Payment Service</td><td>Atomic event publishing — no dual-write problem with RabbitMQ</td></tr>
+        <tr><td><strong>Idempotent APIs</strong></td><td>Order Service, Payment Service</td><td>Idempotency-Key header prevents duplicate charges/orders on retry</td></tr>
+        <tr><td><strong>Saga (choreography)</strong></td><td>Order→Payment→Notification</td><td>Distributed transaction across services via event chain, no 2PC</td></tr>
+        <tr><td><strong>Structured Logging</strong></td><td>All 6 services</td><td>Machine-parseable JSON logs with consistent fields for log aggregation</td></tr>
+        <tr><td><strong>Correlation ID Tracing</strong></td><td>All 6 services</td><td>End-to-end request correlation across service boundaries via X-Correlation-Id header</td></tr>
+        <tr><td><strong>Health Check</strong></td><td>All services</td><td>Liveness + readiness probes for Kubernetes to manage pod lifecycle</td></tr>
+        <tr><td><strong>Sidecar Metrics</strong></td><td>Prometheus scraping</td><td>Each service exposes /metrics; Prometheus scrapes on 15s interval</td></tr>
+        <tr><td><strong>Seat Hold TTL</strong></td><td>Seating Service</td><td>Temporary locks prevent double-booking; auto-expire after 15 minutes</td></tr>
+        <tr><td><strong>Polyglot Persistence</strong></td><td>MySQL (4 svc) + PostgreSQL (2 svc)</td><td>Best-fit database engine per service requirements</td></tr>
+        <tr><td><strong>API Gateway / Ingress</strong></td><td>Nginx Ingress Controller</td><td>Single entry point, TLS termination, routing to services</td></tr>
+        <tr><td><strong>Multi-stage Docker builds</strong></td><td>Java services, Frontend</td><td>Smaller runtime images (no build tools in final layer)</td></tr>
+      </tbody>
+    </table>
+
+    <div class="infobox blue" style="margin-top:20px">
+      <strong>Polyglot Architecture:</strong> SeatSavvy deliberately uses three different backend technology stacks — Python/FastAPI for read-heavy catalog/user operations, Node.js/Express for real-time seat management, and Java/Spring Boot for transactional order and payment processing. Each language is chosen for its strengths in the specific domain.
+    </div>
+  </section>
+
+  <div class="doc-footer">
+    <p>SeatSavvy Product Documentation &nbsp;·&nbsp; Generated: <strong>April 28, 2026</strong> &nbsp;·&nbsp; Kubernetes namespace: <strong>seatsavvy</strong> &nbsp;·&nbsp; 6 microservices · 6 databases · 1 message broker · full observability stack</p>
+  </div>
+
+</div><!-- /content -->
+
+<script>
+  // Active nav link on scroll
+  const sections = document.querySelectorAll('section[id], div[id]');
+  const links = document.querySelectorAll('.nav-link');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`.nav-link[href="#${entry.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.25 });
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

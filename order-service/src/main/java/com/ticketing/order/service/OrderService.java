@@ -4,6 +4,9 @@ import com.ticketing.order.dto.*;
 import com.ticketing.order.model.*;
 import com.ticketing.order.model.OrderStatus;
 import com.ticketing.order.repository.*;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -29,6 +32,24 @@ public class OrderService {
     private final OrderRepository orderRepo;
     private final TicketRepository ticketRepo;
     private final OrderOutboxRepository outboxRepo;
+    private final MeterRegistry registry;
+
+    private Counter ordersPlacedCounter;
+    private Counter ordersConfirmedCounter;
+    private Counter ordersPaymentFailedCounter;
+
+    @PostConstruct
+    void initMetrics() {
+        ordersPlacedCounter = Counter.builder("orders_placed_total")
+                .description("Total orders placed")
+                .register(registry);
+        ordersConfirmedCounter = Counter.builder("orders_confirmed_total")
+                .description("Total orders confirmed after successful payment")
+                .register(registry);
+        ordersPaymentFailedCounter = Counter.builder("orders_payment_failed_total")
+                .description("Total orders that failed payment")
+                .register(registry);
+    }
 
     // ── Place Order ───────────────────────────────────────────────────────────
     // Accepts seat details (including prices) in the request, calculates totals
@@ -75,6 +96,7 @@ public class OrderService {
         ));
 
         orderRepo.save(order);
+        ordersPlacedCounter.increment();
 
         publishToOutbox(order.getOrderId(), "ORDER_PLACED",
                 String.format("{\"orderId\":%d,\"amount\":%s,\"userId\":%d}",
@@ -183,11 +205,13 @@ public class OrderService {
             case "SUCCESS" -> {
                 order.setOrderStatus(OrderStatus.CONFIRMED);
                 generateTickets(order);
+                ordersConfirmedCounter.increment();
                 publishToOutbox(order.getOrderId(), "ORDER_CONFIRMED",
                         "{\"orderId\":" + order.getOrderId() + "}");
             }
             case "FAILED" -> {
                 order.setOrderStatus(OrderStatus.PAYMENT_FAILED);
+                ordersPaymentFailedCounter.increment();
                 publishToOutbox(order.getOrderId(), "ORDER_PAYMENT_FAILED",
                         "{\"orderId\":" + order.getOrderId() + "}");
             }

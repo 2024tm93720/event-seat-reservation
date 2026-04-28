@@ -78,6 +78,12 @@
       <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
       <version>2.5.0</version>
     </dependency>
+    <!-- Structured JSON logging with MDC correlation ID support -->
+    <dependency>
+      <groupId>net.logstash.logback</groupId>
+      <artifactId>logstash-logback-encoder</artifactId>
+      <version>7.4</version>
+    </dependency>
     <!-- Test -->
     <dependency>
       <groupId>org.springframework.boot</groupId>

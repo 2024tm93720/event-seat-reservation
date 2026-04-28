@@ -1,4 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: ticketing
+  name: seatsavvy
+  labels:
+    app.kubernetes.io/name: seatsavvy
+    app.kubernetes.io/part-of: event-seat-reservation

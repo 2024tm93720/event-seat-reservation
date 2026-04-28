@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
   phone VARCHAR(20),
   city VARCHAR(80),
   password_hash VARCHAR(255) DEFAULT '$2b$12$seedplaceholderseedplaceholdeQ1bQOlNqgC3K3wO9X8rJjL3aB7CqK',
+  role VARCHAR(20) NOT NULL DEFAULT 'user',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   INDEX(city), INDEX(email)
 );
@@ -90,3 +91,4 @@ INSERT INTO users (user_id,name,email,phone,city,created_at) VALUES (77,'Sanya N
 INSERT INTO users (user_id,name,email,phone,city,created_at) VALUES (78,'Ananya Reddy','ananya.reddy157@gmail.com','9032368706','Mumbai','2024-07-11 01:19:49');
 INSERT INTO users (user_id,name,email,phone,city,created_at) VALUES (79,'Lakshmi Shetty','lakshmi.shetty979@gmail.com','9776117834','Ahmedabad','2024-10-30 11:50:24');
 INSERT INTO users (user_id,name,email,phone,city,created_at) VALUES (80,'Nisha Das','nisha.das603@gmail.com','9395726351','Ahmedabad','2024-06-06 10:10:10');
+UPDATE users SET role = 'admin' WHERE user_id BETWEEN 1 AND 10;

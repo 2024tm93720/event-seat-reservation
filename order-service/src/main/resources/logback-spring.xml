@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="order-service"/>
+
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+      <customFields>{"service":"${appName}"}</customFields>
+      <fieldNames>
+        <timestamp>timestamp</timestamp>
+        <version>[ignore]</version>
+        <levelValue>[ignore]</levelValue>
+      </fieldNames>
+      <includeMdcKeyName>correlationId</includeMdcKeyName>
+      <shortenedLoggerNameLength>25</shortenedLoggerNameLength>
+    </encoder>
+  </appender>
+
+  <root level="INFO">
+    <appender-ref ref="CONSOLE"/>
+  </root>
+
+  <logger name="com.ticketing.order" level="DEBUG" additivity="false">
+    <appender-ref ref="CONSOLE"/>
+  </logger>
+  <logger name="org.springframework.amqp" level="WARN" additivity="false">
+    <appender-ref ref="CONSOLE"/>
+  </logger>
+  <logger name="org.hibernate.SQL" level="WARN" additivity="false">
+    <appender-ref ref="CONSOLE"/>
+  </logger>
+</configuration>

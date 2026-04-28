@@ -1,0 +1,501 @@
+# ════════════════════════════════════════════════════════════════════════════
+#  MySQL Databases  (user / catalog / seating / notification)
+# ════════════════════════════════════════════════════════════════════════════
+
+# ── user-db ───────────────────────────────────────────────────────────────────
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-db
+  namespace: seatsavvy
+  labels:
+    app: user-db
+    tier: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-db
+  template:
+    metadata:
+      labels:
+        app: user-db
+        tier: database
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        ports:
+        - containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: root-password
+        - name: MYSQL_DATABASE
+          value: "user_db"
+        - name: MYSQL_USER
+          value: "user"
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: password
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        readinessProbe:
+          exec:
+            command: ["mysqladmin", "ping", "-h", "localhost", "-prootpass"]
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+        livenessProbe:
+          exec:
+            command: ["mysqladmin", "ping", "-h", "localhost", "-prootpass"]
+          initialDelaySeconds: 40
+          periodSeconds: 20
+          timeoutSeconds: 5
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: user-db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-db
+  namespace: seatsavvy
+  labels:
+    app: user-db
+spec:
+  selector:
+    app: user-db
+  ports:
+  - port: 3306
+    targetPort: 3306
+
+# ── catalog-db ────────────────────────────────────────────────────────────────
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog-db
+  namespace: seatsavvy
+  labels:
+    app: catalog-db
+    tier: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: catalog-db
+  template:
+    metadata:
+      labels:
+        app: catalog-db
+        tier: database
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        ports:
+        - containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: root-password
+        - name: MYSQL_DATABASE
+          value: "catalog_db"
+        - name: MYSQL_USER
+          value: "catalog"
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: password
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        readinessProbe:
+          exec:
+            command: ["mysqladmin", "ping", "-h", "localhost", "-prootpass"]
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+        livenessProbe:
+          exec:
+            command: ["mysqladmin", "ping", "-h", "localhost", "-prootpass"]
+          initialDelaySeconds: 40
+          periodSeconds: 20
+          timeoutSeconds: 5
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: catalog-db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog-db
+  namespace: seatsavvy
+  labels:
+    app: catalog-db
+spec:
+  selector:
+    app: catalog-db
+  ports:
+  - port: 3306
+    targetPort: 3306
+
+# ── seating-db ────────────────────────────────────────────────────────────────
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seating-db
+  namespace: seatsavvy
+  labels:
+    app: seating-db
+    tier: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: seating-db
+  template:
+    metadata:
+      labels:
+        app: seating-db
+        tier: database
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        ports:
+        - containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: root-password
+        - name: MYSQL_DATABASE
+          value: "seating_db"
+        - name: MYSQL_USER
+          value: "seating"
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: password
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        readinessProbe:
+          exec:
+            command: ["mysqladmin", "ping", "-h", "localhost", "-prootpass"]
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+        livenessProbe:
+          exec:
+            command: ["mysqladmin", "ping", "-h", "localhost", "-prootpass"]
+          initialDelaySeconds: 40
+          periodSeconds: 20
+          timeoutSeconds: 5
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: seating-db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: seating-db
+  namespace: seatsavvy
+  labels:
+    app: seating-db
+spec:
+  selector:
+    app: seating-db
+  ports:
+  - port: 3306
+    targetPort: 3306
+
+# ── notification-db ───────────────────────────────────────────────────────────
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-db
+  namespace: seatsavvy
+  labels:
+    app: notification-db
+    tier: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-db
+  template:
+    metadata:
+      labels:
+        app: notification-db
+        tier: database
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        ports:
+        - containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: root-password
+        - name: MYSQL_DATABASE
+          value: "notification_db"
+        - name: MYSQL_USER
+          value: "notify"
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: password
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        readinessProbe:
+          exec:
+            command: ["mysqladmin", "ping", "-h", "localhost", "-prootpass"]
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+        livenessProbe:
+          exec:
+            command: ["mysqladmin", "ping", "-h", "localhost", "-prootpass"]
+          initialDelaySeconds: 40
+          periodSeconds: 20
+          timeoutSeconds: 5
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: notification-db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-db
+  namespace: seatsavvy
+  labels:
+    app: notification-db
+spec:
+  selector:
+    app: notification-db
+  ports:
+  - port: 3306
+    targetPort: 3306
+
+# ════════════════════════════════════════════════════════════════════════════
+#  PostgreSQL Databases  (order / payment)
+# ════════════════════════════════════════════════════════════════════════════
+
+# ── order-db (PostgreSQL) ─────────────────────────────────────────────────────
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-db
+  namespace: seatsavvy
+  labels:
+    app: order-db
+    tier: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-db
+  template:
+    metadata:
+      labels:
+        app: order-db
+        tier: database
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:16-alpine
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: "order_db"
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: order-db-secret
+              key: username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: order-db-secret
+              key: password
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        readinessProbe:
+          exec:
+            command: ["pg_isready", "-U", "order_user", "-d", "order_db"]
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+        livenessProbe:
+          exec:
+            command: ["pg_isready", "-U", "order_user", "-d", "order_db"]
+          initialDelaySeconds: 40
+          periodSeconds: 20
+          timeoutSeconds: 5
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: order-db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-db
+  namespace: seatsavvy
+  labels:
+    app: order-db
+spec:
+  selector:
+    app: order-db
+  ports:
+  - port: 5432
+    targetPort: 5432
+
+# ── payment-db (PostgreSQL) ───────────────────────────────────────────────────
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-db
+  namespace: seatsavvy
+  labels:
+    app: payment-db
+    tier: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-db
+  template:
+    metadata:
+      labels:
+        app: payment-db
+        tier: database
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:16-alpine
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: "payment_db"
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: payment-db-secret
+              key: username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: payment-db-secret
+              key: password
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        readinessProbe:
+          exec:
+            command: ["pg_isready", "-U", "pay_user", "-d", "payment_db"]
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+        livenessProbe:
+          exec:
+            command: ["pg_isready", "-U", "pay_user", "-d", "payment_db"]
+          initialDelaySeconds: 40
+          periodSeconds: 20
+          timeoutSeconds: 5
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: payment-db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-db
+  namespace: seatsavvy
+  labels:
+    app: payment-db
+spec:
+  selector:
+    app: payment-db
+  ports:
+  - port: 5432
+    targetPort: 5432

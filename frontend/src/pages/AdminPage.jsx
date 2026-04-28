@@ -1,16 +1,17 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   BarChart3, ShoppingCart, CreditCard, CheckCircle,
-  XCircle, Clock, RefreshCw, Ticket, TrendingUp,
+  XCircle, Clock, RefreshCw, Ticket, TrendingUp, Users,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Skeleton } from '../components/ui/Skeleton'
 import { Button } from '../components/ui/Button'
-import { getOrderStats, getPaymentStats, getAllOrders, getAllPayments } from '../lib/api'
+import { getOrderStats, getPaymentStats, getAllOrders, getAllPayments, listUsers } from '../lib/api'
 import {
   formatPrice, formatDateTime,
-  ORDER_STATUS_VARIANT, PAYMENT_STATUS_VARIANT,
+  ORDER_STATUS_VARIANT, PAYMENT_STATUS_VARIANT, cn,
 } from '../lib/utils'
 
 function StatCard({ icon: Icon, label, value, sub, color = 'primary' }) {
@@ -22,36 +23,40 @@ function StatCard({ icon: Icon, label, value, sub, color = 'primary' }) {
     muted:       'bg-muted text-muted-foreground',
   }
   return (
-    <Card>
-      <CardContent className="p-5 flex items-start gap-4">
-        <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg ${colors[color] ?? colors.primary}`}>
-          <Icon className="h-5 w-5" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
-          <p className="mt-0.5 text-2xl font-bold">{value ?? '—'}</p>
-          {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
-        </div>
-      </CardContent>
-    </Card>
+    <div className="rounded-xl border border-border bg-card shadow-sm flex items-center gap-3 p-4 h-full">
+      <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg ${colors[color] ?? colors.primary}`}>
+        <Icon className="h-5 w-5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
+        <p className="mt-0.5 text-xl font-bold leading-tight truncate">{value ?? '—'}</p>
+        <p className="text-xs text-muted-foreground mt-0.5 h-4 leading-4">{sub ?? ''}</p>
+      </div>
+    </div>
   )
 }
 
 function StatSkeleton() {
   return (
-    <Card>
-      <CardContent className="p-5 flex items-start gap-4">
-        <Skeleton className="h-10 w-10 rounded-lg flex-shrink-0" />
-        <div className="flex-1 space-y-2">
-          <Skeleton className="h-3 w-24" />
-          <Skeleton className="h-7 w-16" />
-        </div>
-      </CardContent>
-    </Card>
+    <div className="rounded-xl border border-border bg-card shadow-sm flex items-center gap-3 p-4 h-full">
+      <Skeleton className="h-10 w-10 rounded-lg flex-shrink-0" />
+      <div className="flex-1 space-y-2">
+        <Skeleton className="h-3 w-20" />
+        <Skeleton className="h-6 w-14" />
+        <Skeleton className="h-3 w-12" />
+      </div>
+    </div>
   )
 }
 
+const TABS = [
+  { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+  { id: 'users',     label: 'Users',     icon: Users },
+]
+
 export function AdminPage() {
+  const [activeTab, setActiveTab] = useState('dashboard')
+
   const { data: orderStats, isLoading: osLoading, refetch: refetchOS } = useQuery({
     queryKey: ['orderStats'],
     queryFn:  () => getOrderStats().then((r) => r.data),
@@ -76,10 +81,17 @@ export function AdminPage() {
     staleTime: 30_000,
   })
 
-  function refetchAll() { refetchOS(); refetchPS(); refetchRO(); refetchRP() }
+  const { data: allUsers = [], isLoading: usersLoading, refetch: refetchUsers } = useQuery({
+    queryKey: ['adminUsers'],
+    queryFn:  () => listUsers(100).then((r) => r.data),
+    staleTime: 60_000,
+    enabled: activeTab === 'users',
+  })
+
+  function refetchAll() { refetchOS(); refetchPS(); refetchRO(); refetchRP(); refetchUsers() }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 space-y-8">
+    <div className="mx-auto max-w-7xl px-4 py-8 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -94,10 +106,32 @@ export function AdminPage() {
         </Button>
       </div>
 
+      {/* Tab bar */}
+      <div className="flex gap-1 border-b border-border">
+        {TABS.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => setActiveTab(id)}
+            className={cn(
+              'flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
+              activeTab === id
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <Icon className="h-4 w-4" />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Dashboard Tab ── */}
+      {activeTab === 'dashboard' && <div className="space-y-8">
+
       {/* ── Order Stats ── */}
       <section>
         <h2 className="mb-4 text-lg font-semibold">Orders</h2>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6 items-stretch">
           {osLoading ? Array.from({ length: 6 }).map((_, i) => <StatSkeleton key={i} />) : [
             { icon: ShoppingCart, label: 'Total',        value: orderStats?.total,        color: 'primary' },
             { icon: CheckCircle,  label: 'Confirmed',    value: orderStats?.confirmed,    color: 'success' },
@@ -112,7 +146,7 @@ export function AdminPage() {
       {/* ── Payment Stats ── */}
       <section>
         <h2 className="mb-4 text-lg font-semibold">Payments</h2>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5 items-stretch">
           {psLoading ? Array.from({ length: 5 }).map((_, i) => <StatSkeleton key={i} />) : [
             { icon: CreditCard,  label: 'Total',     value: payStats?.total,    color: 'primary' },
             { icon: CheckCircle, label: 'Successful',value: payStats?.success,  color: 'success' },
@@ -239,6 +273,70 @@ export function AdminPage() {
           </CardContent>
         </Card>
       </div>
+      </div>}
+
+      {/* ── Users Tab ── */}
+      {activeTab === 'users' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Users className="h-4 w-4 text-primary" />
+              All Users
+              {!usersLoading && (
+                <span className="ml-auto text-xs font-normal text-muted-foreground">
+                  {allUsers.length} total
+                </span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-xs text-muted-foreground">
+                    <th className="px-4 py-2.5 text-left font-medium">ID</th>
+                    <th className="px-4 py-2.5 text-left font-medium">Name</th>
+                    <th className="px-4 py-2.5 text-left font-medium">Email</th>
+                    <th className="px-4 py-2.5 text-left font-medium">Phone</th>
+                    <th className="px-4 py-2.5 text-left font-medium">City</th>
+                    <th className="px-4 py-2.5 text-left font-medium">Role</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {usersLoading ? (
+                    Array.from({ length: 8 }).map((_, i) => (
+                      <tr key={i} className="border-b border-border">
+                        {Array.from({ length: 6 }).map((__, j) => (
+                          <td key={j} className="px-4 py-2.5"><Skeleton className="h-4 w-full" /></td>
+                        ))}
+                      </tr>
+                    ))
+                  ) : allUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground text-xs">No users found</td>
+                    </tr>
+                  ) : (
+                    allUsers.map((u) => (
+                      <tr key={u.user_id} className="border-b border-border hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">#{u.user_id}</td>
+                        <td className="px-4 py-2.5 font-medium">{u.name}</td>
+                        <td className="px-4 py-2.5 text-muted-foreground">{u.email}</td>
+                        <td className="px-4 py-2.5 text-muted-foreground">{u.phone ?? '—'}</td>
+                        <td className="px-4 py-2.5 text-muted-foreground">{u.city ?? '—'}</td>
+                        <td className="px-4 py-2.5">
+                          <Badge variant={u.role === 'admin' ? 'primary' : 'secondary'} className="text-[10px]">
+                            {u.role}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

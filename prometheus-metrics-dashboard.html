@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SeatSavvy — Prometheus Metrics Dashboard</title>
+<style>
+  :root {
+    --bg:      #0d1117;
+    --surface: #161b22;
+    --border:  #30363d;
+    --text:    #e6edf3;
+    --muted:   #8b949e;
+    --green:   #3fb950;
+    --red:     #f85149;
+    --yellow:  #d29922;
+    --blue:    #58a6ff;
+    --purple:  #bc8cff;
+    --orange:  #ffa657;
+    --cyan:    #39d353;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg, #1a1f3a 0%, #161b22 60%, #0d1117 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 28px 40px 24px;
+    display: flex; align-items: center; gap: 20px;
+  }
+  .header-icon { font-size: 2.4rem; }
+  .header h1 { font-size: 1.55rem; font-weight: 700; letter-spacing: -.5px; }
+  .header p  { color: var(--muted); font-size: 0.82rem; margin-top: 3px; }
+  .header-badge {
+    margin-left: auto;
+    background: #1a3a2a; border: 1px solid var(--green); color: var(--green);
+    padding: 5px 14px; border-radius: 20px; font-size: 0.78rem; font-weight: 600;
+    display: flex; align-items: center; gap: 6px; white-space: nowrap;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* ── Layout ── */
+  .main { padding: 32px 40px; max-width: 1400px; }
+
+  /* ── Section heading ── */
+  .section-title {
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.2px; color: var(--muted);
+    border-bottom: 1px solid var(--border); padding-bottom: 8px; margin: 32px 0 18px;
+  }
+  .section-title:first-child { margin-top: 0; }
+
+  /* ── KPI row ── */
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 14px; margin-bottom: 10px; }
+  .kpi {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 18px 20px; position: relative; overflow: hidden;
+  }
+  .kpi::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background: var(--accent,var(--blue)); border-radius:10px 10px 0 0; }
+  .kpi.green  { --accent: var(--green); }
+  .kpi.red    { --accent: var(--red); }
+  .kpi.yellow { --accent: var(--yellow); }
+  .kpi.blue   { --accent: var(--blue); }
+  .kpi.purple { --accent: var(--purple); }
+  .kpi.orange { --accent: var(--orange); }
+  .kpi.cyan   { --accent: var(--cyan); }
+  .kpi-label  { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 8px; }
+  .kpi-value  { font-size: 2.1rem; font-weight: 700; line-height: 1; color: var(--text); }
+  .kpi-meta   { font-size: 0.72rem; color: var(--muted); margin-top: 6px; }
+
+  /* ── Metric cards (query detail) ── */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+  }
+  .card-header {
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(255,255,255,.025);
+  }
+  .card-title { font-size: 0.82rem; font-weight: 600; }
+  .service-tag {
+    font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+    background: rgba(88,166,255,.15); color: var(--blue); border: 1px solid rgba(88,166,255,.3);
+  }
+  .card-body  { padding: 14px 16px; }
+
+  /* PromQL block */
+  .promql-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .7px; margin-bottom: 5px; }
+  .promql {
+    background: #0d1117; border: 1px solid var(--border); border-radius: 6px;
+    padding: 8px 12px; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.78rem;
+    color: #79c0ff; margin-bottom: 12px; word-break: break-all;
+  }
+
+  /* Response block */
+  .resp-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .7px; margin-bottom: 5px; }
+  .resp-block {
+    background: #0d1117; border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px 12px; font-family: 'SFMono-Regular', Consolas, monospace; font-size: 0.76rem;
+    overflow-x: auto; white-space: pre; max-height: 200px; overflow-y: auto;
+    line-height: 1.55;
+  }
+  .k  { color: #79c0ff; }
+  .s  { color: #a5d6ff; }
+  .n  { color: var(--green); }
+  .n0 { color: var(--red); }
+  .lbl{ color: var(--purple); }
+  .ts { color: var(--muted); }
+
+  /* Result bar */
+  .result-row {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 6px;
+  }
+  .result-bar-wrap {
+    flex: 1; background: rgba(255,255,255,.06); border-radius: 4px; height: 10px; overflow: hidden;
+  }
+  .result-bar { height: 100%; border-radius: 4px; transition: width .8s ease; }
+  .result-name { font-size: 0.72rem; color: var(--muted); width: 140px; flex-shrink: 0; font-family: monospace; }
+  .result-num  { font-size: 0.78rem; font-weight: 700; width: 40px; text-align: right; flex-shrink: 0; }
+
+  /* Target table */
+  .target-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  .target-table th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 0.68rem; letter-spacing: .7px; padding: 6px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  .target-table td { padding: 8px 12px; border-bottom: 1px solid rgba(48,54,61,.6); }
+  .target-table tr:last-child td { border-bottom: none; }
+  .up   { color: var(--green); font-weight: 700; }
+  .mono { font-family: monospace; color: var(--blue); font-size: 0.76rem; }
+  .job  { font-family: monospace; color: var(--orange); font-size: 0.76rem; }
+
+  /* Footer */
+  .footer { color: var(--muted); font-size: 0.75rem; padding: 24px 40px; border-top: 1px solid var(--border); margin-top: 40px; }
+  .footer span { color: var(--blue); }
+</style>
+</head>
+<body>
+
+<!-- ══════════════ HEADER ══════════════ -->
+<div class="header">
+  <div class="header-icon">📊</div>
+  <div>
+    <h1>SeatSavvy — Prometheus Metrics Dashboard</h1>
+    <p>Custom Micrometer counters scraped by Prometheus · Kubernetes namespace: seatsavvy</p>
+  </div>
+  <div class="header-badge">
+    <span class="dot"></span>
+    All 6 targets UP
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- ══ PRIMARY FOCUS METRICS ══ -->
+  <div class="section-title">Primary Monitoring Targets</div>
+
+  <div class="kpi-row">
+    <div class="kpi green">
+      <div class="kpi-label">orders_placed_total</div>
+      <div class="kpi-value">3</div>
+      <div class="kpi-meta">order-service · Micrometer Counter</div>
+    </div>
+    <div class="kpi red">
+      <div class="kpi-label">seat_reservations_failed</div>
+      <div class="kpi-value">0</div>
+      <div class="kpi-meta">seating-service · prom-client Gauge</div>
+    </div>
+    <div class="kpi orange">
+      <div class="kpi-label">payments_failed_total</div>
+      <div class="kpi-value">0</div>
+      <div class="kpi-meta">payment-service · Micrometer Counter</div>
+    </div>
+    <div class="kpi blue">
+      <div class="kpi-label">payments_processed_total</div>
+      <div class="kpi-value">8</div>
+      <div class="kpi-meta">payment-service · status=SUCCESS</div>
+    </div>
+  </div>
+
+  <!-- ══ PROMETHEUS TARGETS ══ -->
+  <div class="section-title">Prometheus Scrape Targets — All UP</div>
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-body" style="padding:0">
+      <table class="target-table">
+        <thead>
+          <tr>
+            <th>Job</th>
+            <th>Instance</th>
+            <th>Scrape URL</th>
+            <th>State</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="job">user-service</td>       <td class="mono">user-service:8001</td>       <td class="mono">:8001/actuator/prometheus</td>       <td class="up">● UP</td></tr>
+          <tr><td class="job">catalog-service</td>    <td class="mono">catalog-service:8002</td>    <td class="mono">:8002/metrics</td>                    <td class="up">● UP</td></tr>
+          <tr><td class="job">seating-service</td>    <td class="mono">seating-service:8003</td>    <td class="mono">:8003/metrics</td>                    <td class="up">● UP</td></tr>
+          <tr><td class="job">order-service</td>      <td class="mono">order-service:8965</td>      <td class="mono">:8965/actuator/prometheus</td>        <td class="up">● UP</td></tr>
+          <tr><td class="job">payment-service</td>    <td class="mono">payment-service:9865</td>    <td class="mono">:9865/actuator/prometheus</td>        <td class="up">● UP</td></tr>
+          <tr><td class="job">notification-service</td><td class="mono">notification-service:8006</td><td class="mono">:8006/metrics</td>                  <td class="up">● UP</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══ QUERY CARDS: ORDER SERVICE ══ -->
+  <div class="section-title">Order Service Metrics (order-service · Spring Boot / Micrometer)</div>
+  <div class="cards">
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">orders_placed_total</span>
+        <span class="service-tag">order-service</span>
+      </div>
+      <div class="card-body">
+        <div class="promql-label">PromQL Query</div>
+        <div class="promql">orders_placed_total</div>
+        <div class="resp-label">Live Response</div>
+        <div class="resp-block"><span class="k">{</span>
+  <span class="k">"status"</span>: <span class="s">"success"</span>,
+  <span class="k">"data"</span>: <span class="k">{</span>
+    <span class="k">"resultType"</span>: <span class="s">"vector"</span>,
+    <span class="k">"result"</span>: <span class="k">[{</span>
+      <span class="k">"metric"</span>: <span class="k">{</span>
+        <span class="k">"__name__"</span>: <span class="s">"orders_placed_total"</span>,
+        <span class="k">"instance"</span>: <span class="s">"order-service:8965"</span>,
+        <span class="k">"job"</span>: <span class="s">"order-service"</span>
+      <span class="k">}</span>,
+      <span class="k">"value"</span>: <span class="k">[</span><span class="ts">1777317332.85</span>, <span class="n">"3"</span><span class="k">]</span>
+    <span class="k">}]</span>
+  <span class="k">}</span>
+<span class="k">}</span></div>
+        <div style="margin-top:12px">
+          <div class="result-row">
+            <span class="result-name">orders placed</span>
+            <div class="result-bar-wrap"><div class="result-bar" style="width:37%;background:var(--green)"></div></div>
+            <span class="result-num" style="color:var(--green)">3</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">orders_confirmed_total</span>
+        <span class="service-tag">order-service</span>
+      </div>
+      <div class="card-body">
+        <div class="promql-label">PromQL Query</div>
+        <div class="promql">orders_confirmed_total</div>
+        <div class="resp-label">Live Response</div>
+        <div class="resp-block"><span class="k">{</span>
+  <span class="k">"status"</span>: <span class="s">"success"</span>,
+  <span class="k">"data"</span>: <span class="k">{</span>
+    <span class="k">"resultType"</span>: <span class="s">"vector"</span>,
+    <span class="k">"result"</span>: <span class="k">[{</span>
+      <span class="k">"metric"</span>: <span class="k">{</span>
+        <span class="k">"__name__"</span>: <span class="s">"orders_confirmed_total"</span>,
+        <span class="k">"instance"</span>: <span class="s">"order-service:8965"</span>,
+        <span class="k">"job"</span>: <span class="s">"order-service"</span>
+      <span class="k">}</span>,
+      <span class="k">"value"</span>: <span class="k">[</span><span class="ts">1777317332.85</span>, <span class="n">"6"</span><span class="k">]</span>
+    <span class="k">}]</span>
+  <span class="k">}</span>
+<span class="k">}</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">orders_payment_failed_total</span>
+        <span class="service-tag">order-service</span>
+      </div>
+      <div class="card-body">
+        <div class="promql-label">PromQL Query</div>
+        <div class="promql">orders_payment_failed_total</div>
+        <div class="resp-label">Live Response</div>
+        <div class="resp-block"><span class="k">{</span>
+  <span class="k">"status"</span>: <span class="s">"success"</span>,
+  <span class="k">"data"</span>: <span class="k">{</span>
+    <span class="k">"resultType"</span>: <span class="s">"vector"</span>,
+    <span class="k">"result"</span>: <span class="k">[{</span>
+      <span class="k">"metric"</span>: <span class="k">{</span>
+        <span class="k">"__name__"</span>: <span class="s">"orders_payment_failed_total"</span>,
+        <span class="k">"instance"</span>: <span class="s">"order-service:8965"</span>,
+        <span class="k">"job"</span>: <span class="s">"order-service"</span>
+      <span class="k">}</span>,
+      <span class="k">"value"</span>: <span class="k">[</span><span class="ts">1777317332.85</span>, <span class="n0">"0"</span><span class="k">]</span>
+    <span class="k">}]</span>
+  <span class="k">}</span>
+<span class="k">}</span></div>
+      </div>
+    </div>
+
+  </div><!-- /cards -->
+
+  <!-- ══ QUERY CARDS: PAYMENT SERVICE ══ -->
+  <div class="section-title">Payment Service Metrics (payment-service · Spring Boot / Micrometer)</div>
+  <div class="cards">
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">payments_processed_total (by status)</span>
+        <span class="service-tag">payment-service</span>
+      </div>
+      <div class="card-body">
+        <div class="promql-label">PromQL Query</div>
+        <div class="promql">payments_processed_total</div>
+        <div class="resp-label">Live Response</div>
+        <div class="resp-block"><span class="k">"result"</span>: <span class="k">[</span>
+  <span class="k">{</span> <span class="lbl">"status"</span>: <span class="s">"SUCCESS"</span>,  <span class="k">"value"</span>: <span class="n">"8"</span> <span class="k">}</span>,
+  <span class="k">{</span> <span class="lbl">"status"</span>: <span class="s">"FAILED"</span>,   <span class="k">"value"</span>: <span class="n0">"0"</span> <span class="k">}</span>,
+  <span class="k">{</span> <span class="lbl">"status"</span>: <span class="s">"REFUNDED"</span>, <span class="k">"value"</span>: <span class="n0">"0"</span> <span class="k">}</span>
+<span class="k">]</span></div>
+        <div style="margin-top:12px">
+          <div class="result-row">
+            <span class="result-name">SUCCESS</span>
+            <div class="result-bar-wrap"><div class="result-bar" style="width:100%;background:var(--green)"></div></div>
+            <span class="result-num" style="color:var(--green)">8</span>
+          </div>
+          <div class="result-row">
+            <span class="result-name">FAILED</span>
+            <div class="result-bar-wrap"><div class="result-bar" style="width:0%;background:var(--red)"></div></div>
+            <span class="result-num" style="color:var(--red)">0</span>
+          </div>
+          <div class="result-row">
+            <span class="result-name">REFUNDED</span>
+            <div class="result-bar-wrap"><div class="result-bar" style="width:0%;background:var(--yellow)"></div></div>
+            <span class="result-num" style="color:var(--yellow)">0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">payments_failed_total</span>
+        <span class="service-tag">payment-service</span>
+      </div>
+      <div class="card-body">
+        <div class="promql-label">PromQL Query</div>
+        <div class="promql">payments_failed_total</div>
+        <div class="resp-label">Live Response</div>
+        <div class="resp-block"><span class="k">{</span>
+  <span class="k">"status"</span>: <span class="s">"success"</span>,
+  <span class="k">"data"</span>: <span class="k">{</span>
+    <span class="k">"resultType"</span>: <span class="s">"vector"</span>,
+    <span class="k">"result"</span>: <span class="k">[{</span>
+      <span class="k">"metric"</span>: <span class="k">{</span>
+        <span class="k">"__name__"</span>: <span class="s">"payments_failed_total"</span>,
+        <span class="k">"instance"</span>: <span class="s">"payment-service:9865"</span>,
+        <span class="k">"job"</span>: <span class="s">"payment-service"</span>
+      <span class="k">}</span>,
+      <span class="k">"value"</span>: <span class="k">[</span><span class="ts">1777317332.85</span>, <span class="n0">"0"</span><span class="k">]</span>
+    <span class="k">}]</span>
+  <span class="k">}</span>
+<span class="k">}</span></div>
+        <div style="margin-top:8px;font-size:0.74rem;color:var(--muted)">
+          Standalone counter — increments only on gateway-declined transactions. Currently 0 because the simulated gateway runs at ~98% success rate.
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /cards -->
+
+  <!-- ══ QUERY CARDS: SEATING SERVICE ══ -->
+  <div class="section-title">Seating Service Metrics (seating-service · Node.js / prom-client)</div>
+  <div class="cards">
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">seat_reservations_failed</span>
+        <span class="service-tag">seating-service</span>
+      </div>
+      <div class="card-body">
+        <div class="promql-label">PromQL Query</div>
+        <div class="promql">seat_reservations_failed</div>
+        <div class="resp-label">Live Response</div>
+        <div class="resp-block"><span class="k">{</span>
+  <span class="k">"status"</span>: <span class="s">"success"</span>,
+  <span class="k">"data"</span>: <span class="k">{</span>
+    <span class="k">"resultType"</span>: <span class="s">"vector"</span>,
+    <span class="k">"result"</span>: <span class="k">[{</span>
+      <span class="k">"metric"</span>: <span class="k">{</span>
+        <span class="k">"__name__"</span>: <span class="s">"seat_reservations_failed"</span>,
+        <span class="k">"instance"</span>: <span class="s">"seating-service:8003"</span>,
+        <span class="k">"job"</span>: <span class="s">"seating-service"</span>
+      <span class="k">}</span>,
+      <span class="k">"value"</span>: <span class="k">[</span><span class="ts">1777317332.85</span>, <span class="n0">"0"</span><span class="k">]</span>
+    <span class="k">}]</span>
+  <span class="k">}</span>
+<span class="k">}</span></div>
+        <div style="margin-top:8px;font-size:0.74rem;color:var(--muted)">
+          Incremented when a seat reservation attempt fails (seat already taken or invalid state). Zero = no contention conflicts observed.
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">seat_reservations_total &amp; seat_holds_active</span>
+        <span class="service-tag">seating-service</span>
+      </div>
+      <div class="card-body">
+        <div class="promql-label">PromQL Queries</div>
+        <div class="promql">seat_reservations_total<br>seat_holds_active</div>
+        <div class="resp-label">Live Response</div>
+        <div class="resp-block"><span class="k"># seat_reservations_total</span>
+<span class="k">"result"</span>: <span class="k">[{</span>
+  <span class="k">"metric"</span>: <span class="k">{</span> <span class="k">"__name__"</span>: <span class="s">"seat_reservations_total"</span> <span class="k">}</span>,
+  <span class="k">"value"</span>: <span class="k">[</span><span class="ts">..timestamp..</span>, <span class="n">"2"</span><span class="k">]</span>
+<span class="k">}]</span>
+
+<span class="k"># seat_holds_active</span>
+<span class="k">"result"</span>: <span class="k">[{</span>
+  <span class="k">"metric"</span>: <span class="k">{</span> <span class="k">"__name__"</span>: <span class="s">"seat_holds_active"</span> <span class="k">}</span>,
+  <span class="k">"value"</span>: <span class="k">[</span><span class="ts">..timestamp..</span>, <span class="n0">"0"</span><span class="k">]</span>
+<span class="k">}]</span></div>
+        <div style="margin-top:12px">
+          <div class="result-row">
+            <span class="result-name">reservations_total</span>
+            <div class="result-bar-wrap"><div class="result-bar" style="width:25%;background:var(--cyan)"></div></div>
+            <span class="result-num" style="color:var(--cyan)">2</span>
+          </div>
+          <div class="result-row">
+            <span class="result-name">holds_active</span>
+            <div class="result-bar-wrap"><div class="result-bar" style="width:0%;background:var(--yellow)"></div></div>
+            <span class="result-num" style="color:var(--yellow)">0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /cards -->
+
+  <!-- ══ OTHER SERVICES ══ -->
+  <div class="section-title">Other Service Metrics</div>
+  <div class="kpi-row">
+    <div class="kpi purple">
+      <div class="kpi-label">users_registered_total</div>
+      <div class="kpi-value">3</div>
+      <div class="kpi-meta">user-service · FastAPI</div>
+    </div>
+    <div class="kpi red">
+      <div class="kpi-label">auth_failures_total</div>
+      <div class="kpi-value">3</div>
+      <div class="kpi-meta">user-service · FastAPI</div>
+    </div>
+    <div class="kpi cyan">
+      <div class="kpi-label">notifications_sent_total</div>
+      <div class="kpi-value">8</div>
+      <div class="kpi-meta">notification-service · channel=EMAIL status=SENT</div>
+    </div>
+  </div>
+
+  <!-- ══ INSTRUMENTATION SUMMARY ══ -->
+  <div class="section-title">Custom Instrumentation Added — Code Reference</div>
+  <div class="cards">
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">OrderService.java — Micrometer counters</span>
+        <span class="service-tag">order-service</span>
+      </div>
+      <div class="card-body">
+        <div class="promql-label">Added to OrderService.java</div>
+        <div class="resp-block"><span class="k">@PostConstruct</span>
+<span class="k">void</span> <span class="n">initMetrics</span>() {
+  ordersPlacedCounter = Counter.<span class="n">builder</span>(<span class="s">"orders_placed_total"</span>)
+      .description(<span class="s">"Total orders placed"</span>)
+      .register(registry);
+  ordersConfirmedCounter = Counter.<span class="n">builder</span>(<span class="s">"orders_confirmed_total"</span>)
+      .description(<span class="s">"Total orders confirmed after payment"</span>)
+      .register(registry);
+  ordersPaymentFailedCounter = Counter.<span class="n">builder</span>(<span class="s">"orders_payment_failed_total"</span>)
+      .description(<span class="s">"Total orders that failed payment"</span>)
+      .register(registry);
+}
+
+<span class="k">// In placeOrder():</span>
+ordersPlacedCounter.<span class="n">increment</span>();
+
+<span class="k">// In handlePaymentResult():</span>
+<span class="k">case</span> <span class="s">"SUCCESS"</span> <span class="k">-></span> ordersConfirmedCounter.<span class="n">increment</span>();
+<span class="k">case</span> <span class="s">"FAILED"</span>  <span class="k">-></span> ordersPaymentFailedCounter.<span class="n">increment</span>();</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">PaymentService.java — Micrometer counters</span>
+        <span class="service-tag">payment-service</span>
+      </div>
+      <div class="card-body">
+        <div class="promql-label">Added to PaymentService.java</div>
+        <div class="resp-block"><span class="k">@PostConstruct</span>
+<span class="k">void</span> <span class="n">initMetrics</span>() {
+  paymentsSuccessCounter = Counter.<span class="n">builder</span>(<span class="s">"payments_processed_total"</span>)
+      .tag(<span class="s">"status"</span>, <span class="s">"SUCCESS"</span>).register(registry);
+  paymentsFailedCounter = Counter.<span class="n">builder</span>(<span class="s">"payments_failed_total"</span>)
+      .description(<span class="s">"Gateway-declined transactions"</span>)
+      .register(registry);
+  Counter.<span class="n">builder</span>(<span class="s">"payments_processed_total"</span>)
+      .tag(<span class="s">"status"</span>, <span class="s">"FAILED"</span>).register(registry);
+  paymentsRefundedCounter = Counter.<span class="n">builder</span>(<span class="s">"payments_processed_total"</span>)
+      .tag(<span class="s">"status"</span>, <span class="s">"REFUNDED"</span>).register(registry);
+}
+
+<span class="k">// In charge() — after paymentRepo.save():</span>
+<span class="k">if</span> (gatewaySuccess) {
+  paymentsSuccessCounter.<span class="n">increment</span>();
+} <span class="k">else</span> {
+  paymentsFailedCounter.<span class="n">increment</span>();
+}
+
+<span class="k">// In refund() — after refundRepo.save():</span>
+paymentsRefundedCounter.<span class="n">increment</span>();</div>
+      </div>
+    </div>
+
+  </div><!-- /cards -->
+
+</div><!-- /main -->
+
+<div class="footer">
+  Generated: <span>Sun Apr 27 2026</span> &nbsp;·&nbsp;
+  Prometheus: <span>http://localhost:9090</span> &nbsp;·&nbsp;
+  Services rebuilt &amp; redeployed inside Minikube Docker daemon &nbsp;·&nbsp;
+  Namespace: <span>seatsavvy</span>
+</div>
+
+</body>
+</html>

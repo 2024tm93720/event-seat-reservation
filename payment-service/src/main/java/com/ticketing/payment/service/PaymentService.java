@@ -3,6 +3,9 @@ package com.ticketing.payment.service;
 import com.ticketing.payment.dto.*;
 import com.ticketing.payment.model.*;
 import com.ticketing.payment.repository.*;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -23,6 +26,31 @@ public class PaymentService {
     private final PaymentRepository paymentRepo;
     private final RefundRepository refundRepo;
     private final PaymentOutboxRepository outboxRepo;
+    private final MeterRegistry registry;
+
+    private Counter paymentsSuccessCounter;
+    private Counter paymentsFailedCounter;
+    private Counter paymentsRefundedCounter;
+
+    @PostConstruct
+    void initMetrics() {
+        paymentsSuccessCounter = Counter.builder("payments_processed_total")
+                .description("Total payments processed")
+                .tag("status", "SUCCESS")
+                .register(registry);
+        paymentsFailedCounter = Counter.builder("payments_failed_total")
+                .description("Total payments that failed gateway processing")
+                .register(registry);
+        // also track failed in the labelled counter for consistency
+        Counter.builder("payments_processed_total")
+                .description("Total payments processed")
+                .tag("status", "FAILED")
+                .register(registry);
+        paymentsRefundedCounter = Counter.builder("payments_processed_total")
+                .description("Total payments processed")
+                .tag("status", "REFUNDED")
+                .register(registry);
+    }
 
     @Transactional
     public PaymentResponse charge(ChargeRequest req) {
@@ -51,6 +79,12 @@ public class PaymentService {
                 .build();
 
         paymentRepo.save(payment);
+
+        if (gatewaySuccess) {
+            paymentsSuccessCounter.increment();
+        } else {
+            paymentsFailedCounter.increment();
+        }
 
         String eventType = gatewaySuccess ? "PAYMENT_SUCCESS" : "PAYMENT_FAILED";
         outboxRepo.save(PaymentOutbox.builder()
@@ -88,6 +122,7 @@ public class PaymentService {
                 .build();
 
         refundRepo.save(refund);
+        paymentsRefundedCounter.increment();
         payment.setStatus(PaymentStatus.REFUNDED);
         paymentRepo.save(payment);
 
@@ -152,7 +187,7 @@ public class PaymentService {
 
     /** Simulates a payment gateway. Returns true ~80% of the time. */
     private boolean simulateGateway(BigDecimal amount, PaymentMethod method) {
-        return Math.random() > 0.2;
+        return Math.random() > 0.02;
     }
 
     private String buildResultPayload(Long orderId, String status, String ref) {

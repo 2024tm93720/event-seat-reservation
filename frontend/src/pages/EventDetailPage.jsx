@@ -9,8 +9,8 @@ import { Spinner } from '../components/ui/Spinner'
 import { SeatGrid } from '../components/SeatGrid'
 import { BookingFlow } from '../components/BookingFlow'
 import { useAuth } from '../context/AuthContext'
-import { getEvent, getEventSeats, getSeatAvailability } from '../lib/api'
-import { formatDate, formatDateTime, formatPrice, EVENT_STATUS_VARIANT, eventGradient } from '../lib/utils'
+import { getEvent, getEventSeats, getSeatAvailability, getVenue } from '../lib/api'
+import { formatDate, formatDateTime, formatDateLong, formatPrice, EVENT_STATUS_VARIANT, eventGradient } from '../lib/utils'
 
 export function EventDetailPage() {
   const { eventId }           = useParams()
@@ -36,6 +36,14 @@ export function EventDetailPage() {
     staleTime: 30_000,
   })
 
+  // Fetch venue details
+  const { data: venue } = useQuery({
+    queryKey: ['venue', event?.venue_id],
+    queryFn:  () => getVenue(event.venue_id).then((r) => r.data),
+    enabled:  !!event?.venue_id,
+    staleTime: 300_000,
+  })
+
   // Fetch live availability from seating service
   const { data: availability = [], refetch: refetchAvailability } = useQuery({
     queryKey: ['seatAvailability', eventId],
@@ -45,23 +53,28 @@ export function EventDetailPage() {
   })
 
   // Merge: prefer availability data for status, use catalog for definitions
+  // Normalize seat_price to a number (seating service may return it as a string)
   const seats = useMemo(() => {
-    const availMap = new Map(availability.map((s) => [s.seat_id, s]))
+    const normalize = (s) => ({ ...s, seat_price: parseFloat(s.seat_price) || 0 })
     if (availability.length) {
       return availability.map((a) => {
         const def = seatDefs.find((d) => d.seat_id === a.seat_id) || {}
-        return { ...def, ...a }
+        return normalize({ ...def, ...a })
       })
     }
-    return seatDefs.map((d) => ({ ...d, status: 'AVAILABLE' }))
+    return seatDefs.map((d) => normalize({ ...d, status: 'AVAILABLE' }))
   }, [seatDefs, availability])
 
+  const MAX_SEATS = 5
+
   const toggleSeat = useCallback((seat) => {
-    setSelectedSeats((prev) =>
-      prev.some((s) => s.seat_id === seat.seat_id)
-        ? prev.filter((s) => s.seat_id !== seat.seat_id)
-        : [...prev, seat],
-    )
+    setSelectedSeats((prev) => {
+      if (prev.some((s) => s.seat_id === seat.seat_id)) {
+        return prev.filter((s) => s.seat_id !== seat.seat_id)
+      }
+      if (prev.length >= MAX_SEATS) return prev
+      return [...prev, seat]
+    })
   }, [])
 
   const subtotal = selectedSeats.reduce((s, seat) => s + (seat.seat_price || 0), 0)
@@ -164,7 +177,28 @@ export function EventDetailPage() {
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           {/* ── Seat Map ── */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-4">
+            {/* Event info card */}
+            <Card>
+              <CardContent className="py-4 px-5">
+                {event.description && (
+                  <p className="text-sm text-foreground mb-3">{event.description}</p>
+                )}
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 flex-shrink-0" />
+                    {formatDateLong(event.start_time)}
+                  </span>
+                  {venue && (
+                    <span className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 flex-shrink-0" />
+                      {venue.name}, {venue.city}{venue.area ? `, ${venue.area}` : ''}
+                    </span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle>Select Seats</CardTitle>
@@ -186,26 +220,29 @@ export function EventDetailPage() {
           <div className="lg:col-span-1">
             <div className="sticky top-24 space-y-4">
               {isOnSale ? (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <ShoppingCart className="h-4 w-4" />
-                      Your Selection
+                <Card className="shadow-md">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <ShoppingCart className="h-5 w-5" />
+                      Order Summary
                     </CardTitle>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedSeats.length} / {MAX_SEATS} seats selected
+                    </p>
                   </CardHeader>
                   <CardContent>
                     {selectedSeats.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-muted-foreground py-2">
                         Click available seats on the map to select them.
                       </p>
                     ) : (
                       <div className="space-y-4">
-                        <div className="space-y-1.5">
+                        {/* Seat line items */}
+                        <div className="space-y-2">
                           {selectedSeats.map((s) => (
-                            <div key={s.seat_id}
-                              className="flex items-center justify-between text-sm">
-                              <span className="text-foreground">
-                                {s.section || 'General'} · {s.seat_label || s.seat_number || s.seat_id}
+                            <div key={s.seat_id} className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">
+                                {s.section || 'General'} — {s.seat_label || s.seat_number || `Seat ${s.seat_id}`}
                               </span>
                               <div className="flex items-center gap-2">
                                 <span className="font-medium">{formatPrice(s.seat_price)}</span>
@@ -218,29 +255,38 @@ export function EventDetailPage() {
                           ))}
                         </div>
 
-                        <div className="border-t border-border pt-3 space-y-1 text-sm">
+                        {/* Price breakdown */}
+                        <div className="border-t border-border pt-3 space-y-1.5 text-sm">
                           <div className="flex justify-between text-muted-foreground">
-                            <span>Subtotal</span><span>{formatPrice(subtotal)}</span>
+                            <span>Subtotal</span>
+                            <span>{formatPrice(subtotal)}</span>
                           </div>
                           <div className="flex justify-between text-muted-foreground">
-                            <span>Tax (5%)</span><span>{formatPrice(tax)}</span>
+                            <span>Tax (5%)</span>
+                            <span>{formatPrice(tax)}</span>
                           </div>
-                          <div className="flex justify-between font-bold text-base">
-                            <span>Total</span><span>{formatPrice(total)}</span>
+                          <div className="flex justify-between font-bold text-base pt-1 border-t border-border mt-1">
+                            <span>Total</span>
+                            <span className="text-primary">{formatPrice(total)}</span>
                           </div>
                         </div>
 
                         {isLoggedIn ? (
-                          <Button className="w-full" onClick={() => setShowBooking(true)}>
-                            Reserve {selectedSeats.length} Seat{selectedSeats.length !== 1 ? 's' : ''}
-                          </Button>
+                          <>
+                            <Button className="w-full h-11 text-base rounded-xl" onClick={() => setShowBooking(true)}>
+                              Pay {formatPrice(total)}
+                            </Button>
+                            <p className="text-center text-xs text-muted-foreground">
+                              Seats reserved for 15 minutes
+                            </p>
+                          </>
                         ) : (
                           <div className="text-center space-y-2">
                             <p className="text-xs text-muted-foreground">
                               Sign in to complete your booking
                             </p>
                             <Link to="/login">
-                              <Button className="w-full">Sign In to Book</Button>
+                              <Button className="w-full h-11 text-base rounded-xl">Sign In to Book</Button>
                             </Link>
                           </div>
                         )}

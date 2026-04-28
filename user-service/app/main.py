@@ -62,6 +62,7 @@ class UserOut(BaseModel):
     email: str
     phone: str | None = None
     city: str | None = None
+    role: str = 'user'
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -97,28 +98,31 @@ def register(u: UserCreate):
 @app.post("/v1/users/login")
 def login(req: LoginRequest):
     with engine.connect() as c:
-        row = c.execute(text("SELECT user_id,password_hash FROM users WHERE email=:e"), {"e": req.email}).first()
+        row = c.execute(text("SELECT user_id,password_hash,phone,role FROM users WHERE email=:e"), {"e": req.email}).first()
     if not row:
         auth_failures_total.inc()
         raise HTTPException(401, "Invalid credentials")
-    # Seeded users have a placeholder hash; treat 'password' as default for demo.
-    ok = bcrypt.verify(req.password, row.password_hash) if row.password_hash.startswith("$2") and not row.password_hash.startswith("$2b$12$seedplaceholder") else (req.password == "password")
+    is_seeded = row.password_hash.startswith("$2b$12$seedplaceholder")
+    if is_seeded:
+        ok = req.password == row.phone
+    else:
+        ok = bcrypt.verify(req.password, row.password_hash)
     if not ok:
         auth_failures_total.inc()
         raise HTTPException(401, "Invalid credentials")
-    return {"user_id": row.user_id, "token": f"demo-token-{row.user_id}"}
+    return {"user_id": row.user_id, "role": row.role, "token": f"demo-token-{row.user_id}"}
 
 @app.get("/v1/users/{user_id}", response_model=UserOut)
 def get_user(user_id: int):
     with engine.connect() as c:
-        row = c.execute(text("SELECT user_id,name,email,phone,city FROM users WHERE user_id=:i"), {"i": user_id}).first()
+        row = c.execute(text("SELECT user_id,name,email,phone,city,role FROM users WHERE user_id=:i"), {"i": user_id}).first()
     if not row:
         raise HTTPException(404, "User not found")
     return UserOut(**row._mapping)
 
 @app.get("/v1/users", response_model=list[UserOut])
 def list_users(limit: int = 20, city: str | None = None):
-    q = "SELECT user_id,name,email,phone,city FROM users"
+    q = "SELECT user_id,name,email,phone,city,role FROM users"
     params = {"l": limit}
     if city:
         q += " WHERE city=:c"

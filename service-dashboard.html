@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SeatSavvy — Service Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f1f5f9; color: #1e293b; padding: 32px 24px; }
+
+  .page-header { display: flex; align-items: center; gap: 14px; margin-bottom: 32px; }
+  .logo { width: 44px; height: 44px; background: linear-gradient(135deg,#4f46e5,#7c3aed); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  .page-header h1 { font-size: 24px; font-weight: 800; color: #1e293b; }
+  .page-header p { font-size: 13px; color: #64748b; margin-top: 2px; }
+  .badge-live { background: #dcfce7; color: #16a34a; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; border: 1px solid #bbf7d0; letter-spacing: .4px; }
+
+  h2 { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 14px; display: flex; align-items: center; gap-8px; }
+  h2 .section-icon { font-size: 16px; margin-right: 8px; }
+
+  /* ── Docker PS ─────────────────────────────────────── */
+  .docker-table { width: 100%; border-collapse: collapse; font-size: 12.5px; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 28px; }
+  .docker-table thead tr { background: #0f172a; color: #e2e8f0; }
+  .docker-table thead th { padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .6px; }
+  .docker-table tbody tr { border-bottom: 1px solid #f1f5f9; }
+  .docker-table tbody tr:last-child { border-bottom: none; }
+  .docker-table tbody tr:hover { background: #f8fafc; }
+  .docker-table td { padding: 9px 14px; vertical-align: middle; }
+  .container-id { font-family: monospace; color: #6366f1; font-size: 12px; }
+  .image-name { font-weight: 600; color: #334155; }
+  .port-badge { display: inline-block; background: #ede9fe; color: #4f46e5; font-family: monospace; font-size: 11px; padding: 2px 7px; border-radius: 5px; margin: 1px 2px; }
+  .status-healthy { color: #16a34a; font-weight: 600; font-size: 12px; }
+  .status-up { color: #2563eb; font-weight: 600; font-size: 12px; }
+
+  /* ── Health Grid ───────────────────────────────────── */
+  .health-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 28px; }
+  .health-card { background: #fff; border-radius: 12px; padding: 16px 18px; box-shadow: 0 1px 4px rgba(0,0,0,.08); display: flex; align-items: flex-start; gap: 12px; }
+  .health-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+  .dot-green { background: #22c55e; box-shadow: 0 0 0 3px #dcfce7; }
+  .health-svc { font-size: 13px; font-weight: 700; color: #1e293b; }
+  .health-url { font-size: 11px; color: #64748b; font-family: monospace; margin-top: 2px; }
+  .health-status { font-size: 11px; font-weight: 600; color: #16a34a; margin-top: 4px; }
+  .health-note { font-size: 10.5px; color: #94a3b8; margin-top: 2px; }
+
+  /* ── API Calls ─────────────────────────────────────── */
+  .api-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .api-card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  .api-card-header { padding: 12px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f1f5f9; }
+  .svc-tag { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 6px; letter-spacing: .3px; }
+  .tag-user       { background: #dbeafe; color: #1d4ed8; }
+  .tag-catalog    { background: #fef9c3; color: #854d0e; }
+  .tag-seating    { background: #d1fae5; color: #065f46; }
+  .tag-order      { background: #ede9fe; color: #4f46e5; }
+  .tag-payment    { background: #fce7f3; color: #be185d; }
+  .tag-notify     { background: #e0f2fe; color: #0369a1; }
+  .api-card-header .port { font-size: 12px; color: #94a3b8; font-family: monospace; }
+  .api-card-body { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .api-row { display: flex; align-items: flex-start; gap: 8px; }
+  .method { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; margin-top: 1px; letter-spacing: .3px; }
+  .get  { background: #dcfce7; color: #166534; }
+  .post { background: #fef9c3; color: #854d0e; }
+  .api-endpoint { font-family: monospace; font-size: 12px; color: #4f46e5; line-height: 1.5; }
+  .api-desc { font-size: 11px; color: #64748b; margin-top: 1px; }
+
+  .footer { margin-top: 28px; text-align: center; font-size: 11px; color: #94a3b8; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="page-header">
+  <div class="logo">🎫</div>
+  <div>
+    <h1>SeatSavvy — Service Dashboard</h1>
+    <p>Microservices · Health Status · API Reference</p>
+  </div>
+  <div style="margin-left:auto"><span class="badge-live">● ALL SYSTEMS OPERATIONAL</span></div>
+</div>
+
+<!-- Section 1: Docker Containers -->
+<h2><span class="section-icon">🐳</span> Running Containers (docker ps)</h2>
+<table class="docker-table">
+  <thead>
+    <tr>
+      <th>Container ID</th>
+      <th>Image</th>
+      <th>Status</th>
+      <th>Ports</th>
+      <th>Name</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="container-id">42153d5eec2f</td>
+      <td class="image-name">user-service</td>
+      <td class="status-healthy">✔ Up (healthy)</td>
+      <td><span class="port-badge">8001</span></td>
+      <td>event-seat-reservation-user-service-1</td>
+    </tr>
+    <tr>
+      <td class="container-id">f089f168d74b</td>
+      <td class="image-name">frontend</td>
+      <td class="status-up">● Up</td>
+      <td><span class="port-badge">3001</span></td>
+      <td>event-seat-reservation-frontend-1</td>
+    </tr>
+    <tr>
+      <td class="container-id">3c4ef9a008ac</td>
+      <td class="image-name">notification-service</td>
+      <td class="status-up">● Up</td>
+      <td><span class="port-badge">8006</span></td>
+      <td>event-seat-reservation-notification-service-1</td>
+    </tr>
+    <tr>
+      <td class="container-id">1a42941f49bb</td>
+      <td class="image-name">order-service</td>
+      <td class="status-healthy">✔ Up (healthy)</td>
+      <td><span class="port-badge">8965</span></td>
+      <td>event-seat-reservation-order-service-1</td>
+    </tr>
+    <tr>
+      <td class="container-id">8c53f5d46a3b</td>
+      <td class="image-name">payment-service</td>
+      <td class="status-healthy">✔ Up (healthy)</td>
+      <td><span class="port-badge">9865</span></td>
+      <td>event-seat-reservation-payment-service-1</td>
+    </tr>
+    <tr>
+      <td class="container-id">e63a0989c9ef</td>
+      <td class="image-name">seating-service</td>
+      <td class="status-healthy">✔ Up (healthy)</td>
+      <td><span class="port-badge">8003</span></td>
+      <td>event-seat-reservation-seating-service-1</td>
+    </tr>
+    <tr>
+      <td class="container-id">8692b456be48</td>
+      <td class="image-name">catalog-service</td>
+      <td class="status-healthy">✔ Up (healthy)</td>
+      <td><span class="port-badge">8002</span></td>
+      <td>event-seat-reservation-catalog-service-1</td>
+    </tr>
+    <tr>
+      <td class="container-id">7d6c3c616f7f</td>
+      <td class="image-name">grafana/grafana:11.2.0</td>
+      <td class="status-up">● Up</td>
+      <td><span class="port-badge">3000</span></td>
+      <td>event-seat-reservation-grafana-1</td>
+    </tr>
+    <tr>
+      <td class="container-id">458d356e15f9</td>
+      <td class="image-name">prom/prometheus:v2.54.1</td>
+      <td class="status-up">● Up</td>
+      <td><span class="port-badge">9090</span></td>
+      <td>event-seat-reservation-prometheus-1</td>
+    </tr>
+    <tr>
+      <td class="container-id">66d1fefcfd98</td>
+      <td class="image-name">postgres:16-alpine</td>
+      <td class="status-healthy">✔ Up (healthy)</td>
+      <td><span class="port-badge">54321→5432</span></td>
+      <td>event-seat-reservation-order-db-1</td>
+    </tr>
+    <tr>
+      <td class="container-id">9b2447f8c0c2</td>
+      <td class="image-name">postgres:16-alpine</td>
+      <td class="status-healthy">✔ Up (healthy)</td>
+      <td><span class="port-badge">54322→5432</span></td>
+      <td>event-seat-reservation-payment-db-1</td>
+    </tr>
+    <tr>
+      <td class="container-id">6047948bff3b</td>
+      <td class="image-name">rabbitmq:3.13-management-alpine</td>
+      <td class="status-healthy">✔ Up (healthy)</td>
+      <td><span class="port-badge">5672</span><span class="port-badge">15672</span></td>
+      <td>event-seat-reservation-rabbitmq-1</td>
+    </tr>
+    <tr>
+      <td class="container-id">f310c659b9ee</td>
+      <td class="image-name">mysql:8.0</td>
+      <td class="status-healthy">✔ Up (healthy)</td>
+      <td><span class="port-badge">33061→3306</span></td>
+      <td>event-seat-reservation-user-db-1</td>
+    </tr>
+    <tr>
+      <td class="container-id">887fe6670f5b</td>
+      <td class="image-name">mysql:8.0</td>
+      <td class="status-healthy">✔ Up (healthy)</td>
+      <td><span class="port-badge">33062→3306</span></td>
+      <td>event-seat-reservation-catalog-db-1</td>
+    </tr>
+    <tr>
+      <td class="container-id">4dd7800fbe86</td>
+      <td class="image-name">mysql:8.0</td>
+      <td class="status-healthy">✔ Up (healthy)</td>
+      <td><span class="port-badge">33063→3306</span></td>
+      <td>event-seat-reservation-seating-db-1</td>
+    </tr>
+    <tr>
+      <td class="container-id">88ed995df664</td>
+      <td class="image-name">mysql:8.0</td>
+      <td class="status-healthy">✔ Up (healthy)</td>
+      <td><span class="port-badge">33066→3306</span></td>
+      <td>event-seat-reservation-notification-db-1</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- Section 2: Health Status -->
+<h2><span class="section-icon">❤️</span> Service Health Endpoints</h2>
+<div class="health-grid">
+
+  <div class="health-card">
+    <div class="health-dot dot-green"></div>
+    <div>
+      <div class="health-svc">User Service</div>
+      <div class="health-url">GET :8001/health</div>
+      <div class="health-status">✔ status: ok</div>
+      <div class="health-note">FastAPI · MySQL · bcrypt auth</div>
+    </div>
+  </div>
+
+  <div class="health-card">
+    <div class="health-dot dot-green"></div>
+    <div>
+      <div class="health-svc">Catalog Service</div>
+      <div class="health-url">GET :8002/health</div>
+      <div class="health-status">✔ status: ok</div>
+      <div class="health-note">FastAPI · MySQL · Events &amp; Venues</div>
+    </div>
+  </div>
+
+  <div class="health-card">
+    <div class="health-dot dot-green"></div>
+    <div>
+      <div class="health-svc">Seating Service</div>
+      <div class="health-url">GET :8003/health</div>
+      <div class="health-status">✔ status: ok</div>
+      <div class="health-note">Node.js · MySQL · Seat inventory</div>
+    </div>
+  </div>
+
+  <div class="health-card">
+    <div class="health-dot dot-green"></div>
+    <div>
+      <div class="health-svc">Order Service</div>
+      <div class="health-url">GET :8965/actuator/health</div>
+      <div class="health-status">✔ status: UP</div>
+      <div class="health-note">Spring Boot · PostgreSQL · RabbitMQ</div>
+    </div>
+  </div>
+
+  <div class="health-card">
+    <div class="health-dot dot-green"></div>
+    <div>
+      <div class="health-svc">Payment Service</div>
+      <div class="health-url">GET :9865/actuator/health</div>
+      <div class="health-status">✔ status: UP</div>
+      <div class="health-note">Spring Boot · PostgreSQL · Outbox pattern</div>
+    </div>
+  </div>
+
+  <div class="health-card">
+    <div class="health-dot dot-green"></div>
+    <div>
+      <div class="health-svc">Notification Service</div>
+      <div class="health-url">GET :8006/health</div>
+      <div class="health-status">✔ status: ok</div>
+      <div class="health-note">Node.js · MySQL · RabbitMQ consumer</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Section 3: Sample API Calls -->
+<h2><span class="section-icon">🔌</span> Sample API Calls</h2>
+<div class="api-grid">
+
+  <!-- User Service -->
+  <div class="api-card">
+    <div class="api-card-header">
+      <span class="svc-tag tag-user">User Service</span>
+      <span class="port">:8001</span>
+    </div>
+    <div class="api-card-body">
+      <div class="api-row">
+        <span class="method post">POST</span>
+        <div>
+          <div class="api-endpoint">/v1/users</div>
+          <div class="api-desc">Register a new user — body: name, email, phone, password</div>
+        </div>
+      </div>
+      <div class="api-row">
+        <span class="method post">POST</span>
+        <div>
+          <div class="api-endpoint">/v1/users/login</div>
+          <div class="api-desc">Login — body: email, password (seeded users: password = phone)</div>
+        </div>
+      </div>
+      <div class="api-row">
+        <span class="method get">GET</span>
+        <div>
+          <div class="api-endpoint">/v1/users/{user_id}</div>
+          <div class="api-desc">Get user profile by ID</div>
+        </div>
+      </div>
+      <div class="api-row">
+        <span class="method get">GET</span>
+        <div>
+          <div class="api-endpoint">/v1/users?limit=10&amp;city=Pune</div>
+          <div class="api-desc">List users with optional city filter</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Catalog Service -->
+  <div class="api-card">
+    <div class="api-card-header">
+      <span class="svc-tag tag-catalog">Catalog Service</span>
+      <span class="port">:8002</span>
+    </div>
+    <div class="api-card-body">
+      <div class="api-row">
+        <span class="method get">GET</span>
+        <div>
+          <div class="api-endpoint">/v1/events?limit=10&amp;city=Pune</div>
+          <div class="api-desc">List events with optional filters (city, type, status)</div>
+        </div>
+      </div>
+      <div class="api-row">
+        <span class="method get">GET</span>
+        <div>
+          <div class="api-endpoint">/v1/events/{event_id}</div>
+          <div class="api-desc">Get single event details</div>
+        </div>
+      </div>
+      <div class="api-row">
+        <span class="method get">GET</span>
+        <div>
+          <div class="api-endpoint">/v1/venues?limit=15</div>
+          <div class="api-desc">List all venues</div>
+        </div>
+      </div>
+      <div class="api-row">
+        <span class="method get">GET</span>
+        <div>
+          <div class="api-endpoint">/v1/venues/{venue_id}</div>
+          <div class="api-desc">Get venue by ID</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Seating Service -->
+  <div class="api-card">
+    <div class="api-card-header">
+      <span class="svc-tag tag-seating">Seating Service</span>
+      <span class="port">:8003</span>
+    </div>
+    <div class="api-card-body">
+      <div class="api-row">
+        <span class="method get">GET</span>
+        <div>
+          <div class="api-endpoint">/v1/seats?eventId=7&amp;limit=20</div>
+          <div class="api-desc">List seats for an event</div>
+        </div>
+      </div>
+      <div class="api-row">
+        <span class="method get">GET</span>
+        <div>
+          <div class="api-endpoint">/v1/seats?eventId=7&amp;status=AVAILABLE</div>
+          <div class="api-desc">Filter seats by status: AVAILABLE / ALLOCATED</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Order Service -->
+  <div class="api-card">
+    <div class="api-card-header">
+      <span class="svc-tag tag-order">Order Service</span>
+      <span class="port">:8965</span>
+    </div>
+    <div class="api-card-body">
+      <div class="api-row">
+        <span class="method get">GET</span>
+        <div>
+          <div class="api-endpoint">/v1/orders?userId=1</div>
+          <div class="api-desc">List all orders for a user</div>
+        </div>
+      </div>
+      <div class="api-row">
+        <span class="method get">GET</span>
+        <div>
+          <div class="api-endpoint">/v1/orders/{orderId}</div>
+          <div class="api-desc">Get order details with seats &amp; tickets</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment Service -->
+  <div class="api-card">
+    <div class="api-card-header">
+      <span class="svc-tag tag-payment">Payment Service</span>
+      <span class="port">:9865</span>
+    </div>
+    <div class="api-card-body">
+      <div class="api-row">
+        <span class="method get">GET</span>
+        <div>
+          <div class="api-endpoint">/v1/payments/order/{orderId}</div>
+          <div class="api-desc">Get payment record for an order</div>
+        </div>
+      </div>
+      <div class="api-row">
+        <span class="method get">GET</span>
+        <div>
+          <div class="api-endpoint">/actuator/health</div>
+          <div class="api-desc">Spring Boot health check (DB, RabbitMQ, disk)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Service -->
+  <div class="api-card">
+    <div class="api-card-header">
+      <span class="svc-tag tag-notify">Notification Service</span>
+      <span class="port">:8006</span>
+    </div>
+    <div class="api-card-body">
+      <div class="api-row">
+        <span class="method get">GET</span>
+        <div>
+          <div class="api-endpoint">/v1/notifications?userId=1&amp;limit=50</div>
+          <div class="api-desc">List notifications (email history) for a user</div>
+        </div>
+      </div>
+      <div class="api-row">
+        <span class="method post">POST</span>
+        <div>
+          <div class="api-endpoint">/v1/notifications/send</div>
+          <div class="api-desc">Manually send a notification — body: userId, orderId, subject, body</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">SeatSavvy · Event Ticketing &amp; Seat Reservation · Generated 2026-04-27</div>
+
+</body>
+</html>

@@ -12,7 +12,13 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(loadUser)
 
   const login = useCallback((userData) => {
-    const u = { userId: userData.user_id, name: userData.name, email: userData.email, token: userData.token }
+    const u = {
+      userId: userData.user_id,
+      name: userData.name,
+      email: userData.email,
+      token: userData.token,
+      role: userData.role || 'user',
+    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(u))
     setUser(u)
   }, [])
@@ -23,7 +29,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoggedIn: !!user }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoggedIn: !!user, isAdmin: user?.role === 'admin' }}>
       {children}
     </AuthContext.Provider>
   )

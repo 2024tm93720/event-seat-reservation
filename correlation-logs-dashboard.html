@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SeatSavvy — Structured Logs with Correlation IDs</title>
+<style>
+  :root {
+    --bg:      #0d1117;
+    --surface: #161b22;
+    --surface2:#1c2128;
+    --border:  #30363d;
+    --text:    #e6edf3;
+    --muted:   #8b949e;
+    --green:   #3fb950;
+    --red:     #f85149;
+    --yellow:  #d29922;
+    --blue:    #58a6ff;
+    --purple:  #bc8cff;
+    --orange:  #ffa657;
+    --cyan:    #39d353;
+    --pink:    #ff7b72;
+    --cid:     #ffd700;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }
+
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg,#1c1a3a 0%,#161b22 55%,#0d1117 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 26px 40px 22px;
+    display: flex; align-items: flex-start; gap: 18px;
+  }
+  .header-icon { font-size: 2.2rem; margin-top: 2px; }
+  .header h1  { font-size: 1.5rem; font-weight: 700; letter-spacing: -.4px; }
+  .header p   { color: var(--muted); font-size: 0.82rem; margin-top: 4px; }
+  .header-badges { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px;
+    border-radius: 20px; font-size: 0.73rem; font-weight: 600; white-space: nowrap;
+  }
+  .badge.green  { background:#1a3a2a; border:1px solid var(--green); color:var(--green); }
+  .badge.yellow { background:#2d2300; border:1px solid var(--yellow); color:var(--yellow); }
+  .badge.blue   { background:#0d1f3a; border:1px solid var(--blue); color:var(--blue); }
+  .dot { width:7px; height:7px; border-radius:50%; background:currentColor; animation:pulse 2s infinite; }
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+  /* ── Layout ── */
+  .main { padding: 28px 40px; max-width: 1450px; }
+  .section-title {
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.3px; color: var(--muted);
+    border-bottom: 1px solid var(--border); padding-bottom: 7px; margin: 30px 0 16px;
+  }
+  .section-title:first-child { margin-top: 0; }
+
+  /* ── Correlation ID banner ── */
+  .cid-banner {
+    background: linear-gradient(90deg, #1a1400 0%, #2d2100 50%, #1a1400 100%);
+    border: 1px solid var(--cid);
+    border-radius: 10px; padding: 16px 22px;
+    display: flex; align-items: center; gap: 16px; margin-bottom: 24px;
+  }
+  .cid-icon { font-size: 1.8rem; }
+  .cid-label { font-size: 0.7rem; color: #a08000; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+  .cid-value { font-family: monospace; font-size: 1.15rem; color: var(--cid); font-weight: 700; letter-spacing: 1px; }
+  .cid-note  { font-size: 0.75rem; color: #a08000; margin-top: 4px; }
+  .cid-services { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .cid-svc {
+    font-size: 0.7rem; padding: 3px 10px; border-radius: 12px;
+    background: rgba(255,215,0,.12); border: 1px solid rgba(255,215,0,.35);
+    color: var(--cid); font-family: monospace; font-weight: 600;
+  }
+
+  /* ── Trace timeline ── */
+  .timeline {
+    display: flex; align-items: center; gap: 0;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px 22px; margin-bottom: 24px;
+    overflow-x: auto;
+  }
+  .tl-step {
+    display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 120px;
+  }
+  .tl-icon { font-size: 1.5rem; }
+  .tl-name { font-size: 0.7rem; font-weight: 700; color: var(--text); }
+  .tl-detail{ font-size: 0.62rem; color: var(--muted); text-align: center; max-width: 110px; }
+  .tl-status { font-size: 0.62rem; font-weight: 700; padding: 2px 7px; border-radius: 8px; }
+  .tl-status.ok    { background: rgba(63,185,80,.15); color: var(--green); border:1px solid rgba(63,185,80,.3); }
+  .tl-status.async { background: rgba(88,166,255,.15); color: var(--blue); border:1px solid rgba(88,166,255,.3); }
+  .tl-arrow { font-size: 1.2rem; color: var(--muted); padding: 0 6px; margin-bottom: 22px; }
+
+  /* ── Log cards grid ── */
+  .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  @media (max-width: 1050px) { .cards { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden;
+  }
+  .card-header {
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(255,255,255,.025);
+  }
+  .card-left { display: flex; align-items: center; gap: 8px; }
+  .svc-dot   { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .card-title { font-size: 0.82rem; font-weight: 700; }
+  .card-sub   { font-size: 0.68rem; color: var(--muted); }
+  .stack-tag  {
+    font-size: 0.66rem; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .stack-tag.spring { background:rgba(255,166,87,.15); color:var(--orange); border:1px solid rgba(255,166,87,.3); }
+  .stack-tag.fastapi{ background:rgba(63,185,80,.15); color:var(--green); border:1px solid rgba(63,185,80,.3); }
+  .stack-tag.node   { background:rgba(88,166,255,.15); color:var(--blue); border:1px solid rgba(88,166,255,.3); }
+
+  /* log block */
+  .card-body { padding: 12px 14px; }
+  .log-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: .7px; margin-bottom: 5px; display:flex; align-items:center; gap:6px;}
+  .cmd { font-family: monospace; font-size: 0.73rem; color: #79c0ff; }
+  .log-block {
+    background: #0d1117; border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px 12px; font-family: 'SFMono-Regular',Consolas,monospace; font-size: 0.73rem;
+    overflow-x: auto; white-space: pre; max-height: 230px; overflow-y: auto;
+    line-height: 1.6; margin-bottom: 10px;
+  }
+  /* JSON syntax */
+  .k   { color: #79c0ff; }
+  .s   { color: #a5d6ff; }
+  .n   { color: var(--green); }
+  .nw  { color: #f85149; }
+  .ts  { color: var(--muted); }
+  .lv-info  { color: var(--green); font-weight:700; }
+  .lv-debug { color: var(--blue); }
+  .lv-warn  { color: var(--yellow); font-weight:700; }
+  /* Correlation ID highlight */
+  .cid-hl { background:rgba(255,215,0,.25); color:var(--cid); border-radius:3px; padding:0 2px; font-weight:700; }
+  /* line separators */
+  .log-divider { border-top: 1px dashed var(--border); margin: 5px 0; opacity: .5; }
+
+  /* CID not present */
+  .cid-absent { font-size:0.7rem; color:var(--muted); font-style:italic; margin-top:4px; }
+
+  /* impl pill */
+  .impl-tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 0.67rem; padding: 2px 8px; border-radius: 8px;
+    background: rgba(188,140,255,.12); color: var(--purple);
+    border: 1px solid rgba(188,140,255,.3); margin-top: 6px; font-family: monospace;
+  }
+
+  /* ── Implementation detail card ── */
+  .impl-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 1200px) { .impl-cards { grid-template-columns: repeat(2,1fr); } }
+  .impl-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .impl-card-header { padding: 9px 13px; border-bottom: 1px solid var(--border); font-size: 0.79rem; font-weight: 700; background: rgba(255,255,255,.02); display:flex; align-items:center; gap:8px; }
+  .impl-card-body { padding: 12px 13px; }
+  .code-block {
+    background: #0d1117; border: 1px solid var(--border); border-radius: 6px;
+    padding: 9px 11px; font-family: monospace; font-size: 0.72rem; line-height: 1.6;
+    overflow-x: auto; white-space: pre;
+  }
+  .kw  { color: #ff7b72; }
+  .fn  { color: #d2a8ff; }
+  .str { color: #a5d6ff; }
+  .com { color: var(--muted); }
+  .ann { color: #ffa657; }
+
+  /* ── Summary row ── */
+  .summary-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+  .sum-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; text-align: center;
+  }
+  .sum-val  { font-size: 2rem; font-weight: 700; line-height: 1; }
+  .sum-label{ font-size: 0.7rem; color: var(--muted); margin-top: 5px; text-transform: uppercase; letter-spacing: .7px; }
+
+  .footer { color: var(--muted); font-size: 0.74rem; padding: 20px 40px; border-top: 1px solid var(--border); margin-top: 36px; }
+  .footer span { color: var(--blue); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-icon">🔍</div>
+  <div>
+    <h1>Structured Logs with Correlation IDs</h1>
+    <p>End-to-end request tracing across all 6 microservices · Kubernetes namespace: seatsavvy</p>
+  </div>
+  <div class="header-badges">
+    <span class="badge green"><span class="dot"></span> 6 services instrumented</span>
+    <span class="badge yellow">✦ MDC · AsyncLocalStorage · Middleware</span>
+    <span class="badge blue">Header: X-Correlation-Id</span>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- CORRELATION ID BANNER -->
+  <div class="section-title">Traced Request — Live Demo</div>
+  <div class="cid-banner">
+    <div class="cid-icon">🔗</div>
+    <div>
+      <div class="cid-label">Correlation ID (X-Correlation-Id header)</div>
+      <div class="cid-value">TRACE-1777318229-DEMO</div>
+      <div class="cid-note">Single identifier propagated through all service logs for order #406 · Payment PAY1777318232354-03074086 · User #84</div>
+    </div>
+    <div class="cid-services">
+      <span class="cid-svc">user-service ✓</span>
+      <span class="cid-svc">order-service ✓</span>
+      <span class="cid-svc">payment-service ✓</span>
+      <span class="cid-svc">seating-service ✓</span>
+      <span class="cid-svc">catalog-service ✓</span>
+      <span class="cid-svc">notification-service ✓</span>
+    </div>
+  </div>
+
+  <!-- TRACE TIMELINE -->
+  <div class="timeline">
+    <div class="tl-step">
+      <div class="tl-icon">👤</div>
+      <div class="tl-name">user-service</div>
+      <div class="tl-detail">POST /v1/users<br>user_id=84 created</div>
+      <div class="tl-status ok">201 Created</div>
+    </div>
+    <div class="tl-arrow">→</div>
+    <div class="tl-step">
+      <div class="tl-icon">🗓️</div>
+      <div class="tl-name">order-service</div>
+      <div class="tl-detail">POST /v1/orders<br>orderId=406 RESERVED</div>
+      <div class="tl-status ok">201 Created</div>
+    </div>
+    <div class="tl-arrow">→</div>
+    <div class="tl-step">
+      <div class="tl-icon">💳</div>
+      <div class="tl-name">payment-service</div>
+      <div class="tl-detail">POST /v1/payments/charge<br>PAY…03074086 SUCCESS</div>
+      <div class="tl-status ok">201 Created</div>
+    </div>
+    <div class="tl-arrow">⇢</div>
+    <div class="tl-step">
+      <div class="tl-icon">🐇</div>
+      <div class="tl-name">RabbitMQ</div>
+      <div class="tl-detail">PAYMENT_SUCCESS event<br>→ order-service queue</div>
+      <div class="tl-status async">async</div>
+    </div>
+    <div class="tl-arrow">⇢</div>
+    <div class="tl-step">
+      <div class="tl-icon">🎟️</div>
+      <div class="tl-name">order-service</div>
+      <div class="tl-detail">ORDER_CONFIRMED<br>ticket TKT-…2A1BD1BE</div>
+      <div class="tl-status ok">CONFIRMED</div>
+    </div>
+    <div class="tl-arrow">⇢</div>
+    <div class="tl-step">
+      <div class="tl-icon">📧</div>
+      <div class="tl-name">notification-service</div>
+      <div class="tl-detail">EMAIL sent to<br>deenbenny@gmail.com</div>
+      <div class="tl-status ok">SENT</div>
+    </div>
+  </div>
+
+  <!-- LOG CARDS -->
+  <div class="section-title">Live kubectl Logs — Correlation ID Highlighted</div>
+  <div class="cards">
+
+    <!-- ORDER SERVICE -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-left">
+          <div class="svc-dot" style="background:#ffa657"></div>
+          <div>
+            <div class="card-title">order-service</div>
+            <div class="card-sub">Spring Boot 3.2.5 · Logback + logstash-logback-encoder · MDC</div>
+          </div>
+        </div>
+        <div class="stack-tag spring">☕ Spring Boot</div>
+      </div>
+      <div class="card-body">
+        <div class="log-label">
+          <span class="cmd">kubectl logs -n seatsavvy deployment/order-service --tail=20</span>
+        </div>
+        <div class="log-block"><span class="k">{</span><span class="k">"timestamp"</span>:<span class="s">"2026-04-27T19:26:04.679Z"</span>, <span class="k">"message"</span>:<span class="s">"Tomcat started on port 8965"</span>, <span class="k">"level"</span>:<span class="lv-info">"INFO"</span>, <span class="k">"service"</span>:<span class="s">"order-service"</span><span class="k">}</span>
+<span class="k">{</span><span class="k">"timestamp"</span>:<span class="s">"2026-04-27T19:26:04.683Z"</span>, <span class="k">"message"</span>:<span class="s">"Started OrderServiceApplication in 18.4s"</span>, <span class="k">"level"</span>:<span class="lv-info">"INFO"</span>, <span class="k">"service"</span>:<span class="s">"order-service"</span><span class="k">}</span>
+
+<span class="k">{</span>
+  <span class="k">"timestamp"</span>: <span class="s">"2026-04-27T19:30:31.494Z"</span>,
+  <span class="k">"message"</span>: <span class="s">"Order 406 placed — user=1 event=7 seats=1 subtotal=2500.00 tax=125.00 total=2625.00"</span>,
+  <span class="k">"logger_name"</span>: <span class="s">"c.t.o.s.OrderService"</span>,
+  <span class="k">"thread_name"</span>: <span class="s">"http-nio-8965-exec-10"</span>,
+  <span class="k">"level"</span>: <span class="lv-info">"INFO"</span>,
+  <span class="k">"service"</span>: <span class="s">"order-service"</span>,
+  <span class="k">"correlationId"</span>: <span class="cid-hl">"TRACE-1777318229-DEMO"</span>
+<span class="k">}</span>
+
+<span class="k">{</span><span class="k">"timestamp"</span>:<span class="s">"2026-04-27T19:30:33.376Z"</span>, <span class="k">"message"</span>:<span class="s">"Published outbox event 1014 type=ORDER_PLACED"</span>, <span class="k">"level"</span>:<span class="lv-debug">"DEBUG"</span>, <span class="k">"service"</span>:<span class="s">"order-service"</span><span class="k">}</span>
+<span class="k">{</span><span class="k">"timestamp"</span>:<span class="s">"2026-04-27T19:30:35.396Z"</span>, <span class="k">"message"</span>:<span class="s">"Received payment result for order=406 status=SUCCESS"</span>, <span class="k">"level"</span>:<span class="lv-info">"INFO"</span>, <span class="k">"service"</span>:<span class="s">"order-service"</span><span class="k">}</span>
+<span class="k">{</span><span class="k">"timestamp"</span>:<span class="s">"2026-04-27T19:30:36.402Z"</span>, <span class="k">"message"</span>:<span class="s">"Published outbox event 1015 type=ORDER_CONFIRMED"</span>, <span class="k">"level"</span>:<span class="lv-debug">"DEBUG"</span>, <span class="k">"service"</span>:<span class="s">"order-service"</span><span class="k">}</span></div>
+        <div class="impl-tag">✦ CorrelationIdFilter → MDC.put("correlationId", cid) → logstash-logback-encoder auto-includes MDC fields</div>
+      </div>
+    </div>
+
+    <!-- PAYMENT SERVICE -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-left">
+          <div class="svc-dot" style="background:#3fb950"></div>
+          <div>
+            <div class="card-title">payment-service</div>
+            <div class="card-sub">Spring Boot 3.2.5 · Logback + logstash-logback-encoder · MDC</div>
+          </div>
+        </div>
+        <div class="stack-tag spring">☕ Spring Boot</div>
+      </div>
+      <div class="card-body">
+        <div class="log-label">
+          <span class="cmd">kubectl logs -n seatsavvy deployment/payment-service --tail=15</span>
+        </div>
+        <div class="log-block"><span class="k">{</span><span class="k">"timestamp"</span>:<span class="s">"2026-04-27T19:26:03.488Z"</span>, <span class="k">"message"</span>:<span class="s">"Tomcat started on port 9865"</span>, <span class="k">"level"</span>:<span class="lv-info">"INFO"</span>, <span class="k">"service"</span>:<span class="s">"payment-service"</span><span class="k">}</span>
+<span class="k">{</span><span class="k">"timestamp"</span>:<span class="s">"2026-04-27T19:26:03.798Z"</span>, <span class="k">"message"</span>:<span class="s">"Started PaymentServiceApplication in 17.4s"</span>, <span class="k">"level"</span>:<span class="lv-info">"INFO"</span>, <span class="k">"service"</span>:<span class="s">"payment-service"</span><span class="k">}</span>
+
+<span class="k">{</span>
+  <span class="k">"timestamp"</span>: <span class="s">"2026-04-27T19:30:32.452Z"</span>,
+  <span class="k">"message"</span>: <span class="s">"Payment PAY1777318232354-03074086 for order=406 status=SUCCESS"</span>,
+  <span class="k">"logger_name"</span>: <span class="s">"c.t.p.s.PaymentService"</span>,
+  <span class="k">"thread_name"</span>: <span class="s">"http-nio-9865-exec-9"</span>,
+  <span class="k">"level"</span>: <span class="lv-info">"INFO"</span>,
+  <span class="k">"service"</span>: <span class="s">"payment-service"</span>,
+  <span class="k">"correlationId"</span>: <span class="cid-hl">"TRACE-1777318229-DEMO"</span>
+<span class="k">}</span>
+
+<span class="k">{</span><span class="k">"timestamp"</span>:<span class="s">"2026-04-27T19:30:33.392Z"</span>, <span class="k">"message"</span>:<span class="s">"Received payment request for order=406 amount=2625.00"</span>, <span class="k">"level"</span>:<span class="lv-info">"INFO"</span>, <span class="k">"service"</span>:<span class="s">"payment-service"</span><span class="k">}</span>
+<span class="k">{</span><span class="k">"timestamp"</span>:<span class="s">"2026-04-27T19:30:33.399Z"</span>, <span class="k">"message"</span>:<span class="s">"Payment PAY1777318233396-BA83ADB2 for order=406 status=SUCCESS"</span>, <span class="k">"level"</span>:<span class="lv-info">"INFO"</span>, <span class="k">"service"</span>:<span class="s">"payment-service"</span><span class="k">}</span>
+<span class="k">{</span><span class="k">"timestamp"</span>:<span class="s">"2026-04-27T19:30:35.384Z"</span>, <span class="k">"message"</span>:<span class="s">"Published payment outbox event 11"</span>, <span class="k">"level"</span>:<span class="lv-debug">"DEBUG"</span>, <span class="k">"service"</span>:<span class="s">"payment-service"</span><span class="k">}</span></div>
+        <div class="impl-tag">✦ CorrelationIdFilter → MDC.put("correlationId", cid) → logstash-logback-encoder auto-includes MDC fields</div>
+      </div>
+    </div>
+
+    <!-- USER SERVICE -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-left">
+          <div class="svc-dot" style="background:#58a6ff"></div>
+          <div>
+            <div class="card-title">user-service</div>
+            <div class="card-sub">FastAPI · python-json-logger · HTTP middleware</div>
+          </div>
+        </div>
+        <div class="stack-tag fastapi">🐍 FastAPI</div>
+      </div>
+      <div class="card-body">
+        <div class="log-label">
+          <span class="cmd">kubectl logs -n seatsavvy deployment/user-service --tail=12</span>
+        </div>
+        <div class="log-block"><span class="k">{</span><span class="k">"asctime"</span>:<span class="s">"2026-04-27 19:30:27"</span>, <span class="k">"levelname"</span>:<span class="lv-info">"INFO"</span>, <span class="k">"name"</span>:<span class="s">"user-service"</span>, <span class="k">"message"</span>:<span class="s">"request"</span>, <span class="k">"cid"</span>:<span class="s">"e2e6ea1d-…-fe3e"</span>, <span class="k">"path"</span>:<span class="s">"/health"</span>, <span class="k">"method"</span>:<span class="s">"GET"</span>, <span class="k">"status"</span>:<span class="n">200</span><span class="k">}</span>
+
+<span class="k">{</span>
+  <span class="k">"asctime"</span>:   <span class="s">"2026-04-27 19:30:30,554"</span>,
+  <span class="k">"levelname"</span>: <span class="lv-info">"INFO"</span>,
+  <span class="k">"name"</span>:      <span class="s">"user-service"</span>,
+  <span class="k">"message"</span>:   <span class="s">"request"</span>,
+  <span class="k">"cid"</span>:       <span class="cid-hl">"TRACE-1777318229-DEMO"</span>,
+  <span class="k">"path"</span>:      <span class="s">"/v1/users"</span>,
+  <span class="k">"method"</span>:    <span class="s">"POST"</span>,
+  <span class="k">"status"</span>:    <span class="n">201</span>
+<span class="k">}</span>
+
+<span class="k">{</span><span class="k">"asctime"</span>:<span class="s">"2026-04-27 19:30:35"</span>, <span class="k">"levelname"</span>:<span class="lv-info">"INFO"</span>, <span class="k">"name"</span>:<span class="s">"user-service"</span>, <span class="k">"message"</span>:<span class="s">"request"</span>, <span class="k">"cid"</span>:<span class="s">"6f5ac128-…-4e88"</span>, <span class="k">"path"</span>:<span class="s">"/metrics"</span>, <span class="k">"method"</span>:<span class="s">"GET"</span>, <span class="k">"status"</span>:<span class="n">200</span><span class="k">}</span>
+<span class="k">{</span><span class="k">"asctime"</span>:<span class="s">"2026-04-27 19:30:36"</span>, <span class="k">"levelname"</span>:<span class="lv-info">"INFO"</span>, <span class="k">"name"</span>:<span class="s">"user-service"</span>, <span class="k">"message"</span>:<span class="s">"request"</span>, <span class="k">"cid"</span>:<span class="s">"a3d52771-…-7602"</span>, <span class="k">"path"</span>:<span class="s">"/v1/users/1"</span>, <span class="k">"method"</span>:<span class="s">"GET"</span>, <span class="k">"status"</span>:<span class="n">200</span><span class="k">}</span></div>
+        <div class="impl-tag">✦ @app.middleware("http") → cid = headers.get("X-Correlation-Id") or uuid4() → logger.info(extra={"cid": cid})</div>
+      </div>
+    </div>
+
+    <!-- SEATING SERVICE -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-left">
+          <div class="svc-dot" style="background:#bc8cff"></div>
+          <div>
+            <div class="card-title">seating-service</div>
+            <div class="card-sub">Node.js · Pino + pino-http · genReqId middleware</div>
+          </div>
+        </div>
+        <div class="stack-tag node">⬡ Node.js</div>
+      </div>
+      <div class="card-body">
+        <div class="log-label">
+          <span class="cmd">kubectl logs -n seatsavvy deployment/seating-service --tail=6</span>
+        </div>
+        <div class="log-block"><span class="k">{</span>
+  <span class="k">"level"</span>: <span class="n">30</span>, <span class="k">"time"</span>: <span class="ts">1777318209376</span>,
+  <span class="k">"service"</span>: <span class="s">"seating-service"</span>,
+  <span class="k">"req"</span>: <span class="k">{</span>
+    <span class="k">"id"</span>: <span class="cid-hl">"x-correlation-id propagated as req.id"</span>,
+    <span class="k">"method"</span>: <span class="s">"GET"</span>, <span class="k">"url"</span>: <span class="s">"/v1/seats/7"</span>,
+    <span class="k">"headers"</span>: <span class="k">{</span> <span class="k">"x-correlation-id"</span>: <span class="cid-hl">"TRACE-1777318229-DEMO"</span> <span class="k">}</span>
+  <span class="k">}</span>,
+  <span class="k">"cid"</span>: <span class="cid-hl">"TRACE-1777318229-DEMO"</span>,
+  <span class="k">"res"</span>: <span class="k">{</span> <span class="k">"statusCode"</span>: <span class="n">200</span> <span class="k">}</span>,
+  <span class="k">"responseTime"</span>: <span class="n">6</span>, <span class="k">"msg"</span>: <span class="s">"request completed"</span>
+<span class="k">}</span></div>
+        <div class="impl-tag">✦ pinoHttp({ genReqId: (req) => req.headers['x-correlation-id'] || uuid(), customProps: (req) => ({ cid: req.id }) })</div>
+      </div>
+    </div>
+
+    <!-- CATALOG SERVICE -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-left">
+          <div class="svc-dot" style="background:#39d353"></div>
+          <div>
+            <div class="card-title">catalog-service</div>
+            <div class="card-sub">FastAPI · python-json-logger · HTTP middleware</div>
+          </div>
+        </div>
+        <div class="stack-tag fastapi">🐍 FastAPI</div>
+      </div>
+      <div class="card-body">
+        <div class="log-label">
+          <span class="cmd">kubectl logs -n seatsavvy deployment/catalog-service --tail=8</span>
+        </div>
+        <div class="log-block"><span class="k">{</span>
+  <span class="k">"asctime"</span>:   <span class="s">"2026-04-27 19:30:31,494"</span>,
+  <span class="k">"levelname"</span>: <span class="lv-info">"INFO"</span>,
+  <span class="k">"name"</span>:      <span class="s">"catalog-service"</span>,
+  <span class="k">"message"</span>:   <span class="s">"request"</span>,
+  <span class="k">"cid"</span>:       <span class="cid-hl">"TRACE-1777318229-DEMO"</span>,
+  <span class="k">"path"</span>:      <span class="s">"/v1/events/7"</span>,
+  <span class="k">"status"</span>:    <span class="n">200</span>
+<span class="k">}</span>
+
+<span class="k">{</span><span class="k">"asctime"</span>:<span class="s">"2026-04-27 19:30:35"</span>, <span class="k">"levelname"</span>:<span class="lv-info">"INFO"</span>, <span class="k">"name"</span>:<span class="s">"catalog-service"</span>, <span class="k">"message"</span>:<span class="s">"request"</span>, <span class="k">"cid"</span>:<span class="s">"auto-gen-uuid"</span>, <span class="k">"path"</span>:<span class="s">"/metrics"</span>, <span class="k">"status"</span>:<span class="n">200</span><span class="k">}</span></div>
+        <div class="impl-tag">✦ @app.middleware("http") async def cid_mw → cid = headers.get("X-Correlation-Id", str(uuid4()))</div>
+      </div>
+    </div>
+
+    <!-- NOTIFICATION SERVICE -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-left">
+          <div class="svc-dot" style="background:#ffa657"></div>
+          <div>
+            <div class="card-title">notification-service</div>
+            <div class="card-sub">Node.js · Pino + pino-http · EMAIL confirmation</div>
+          </div>
+        </div>
+        <div class="stack-tag node">⬡ Node.js</div>
+      </div>
+      <div class="card-body">
+        <div class="log-label">
+          <span class="cmd">kubectl logs -n seatsavvy deployment/notification-service --tail=8</span>
+        </div>
+        <div class="log-block"><span class="k">{</span>
+  <span class="k">"level"</span>: <span class="n">30</span>, <span class="k">"time"</span>: <span class="ts">1777318236531</span>,
+  <span class="k">"service"</span>: <span class="s">"notification-service"</span>,
+  <span class="k">"to"</span>:      <span class="s">"deenbenny@gmail.com"</span>,
+  <span class="k">"subject"</span>: <span class="s">"Booking Confirmed! 🎟️ Order #406 — Live Festival 7"</span>,
+  <span class="k">"tickets"</span>: <span class="k">[</span><span class="s">"TKT-1777318235414-2A1BD1BE"</span>, <span class="s">"TKT-1777318235431-F3E73E58"</span><span class="k">]</span>,
+  <span class="k">"msg"</span>:     <span class="s">"EMAIL LOG (no SMTP configured)"</span>
+<span class="k">}</span>
+
+<span class="k">{</span>
+  <span class="k">"level"</span>: <span class="n">30</span>, <span class="k">"time"</span>: <span class="ts">1777318246242</span>,
+  <span class="k">"service"</span>: <span class="s">"notification-service"</span>,
+  <span class="k">"req"</span>: <span class="k">{</span> <span class="k">"id"</span>: <span class="s">"c73c8b2a-b9d5-44a9-a026"</span>, <span class="k">"url"</span>: <span class="s">"/health"</span> <span class="k">}</span>,
+  <span class="k">"res"</span>: <span class="k">{</span> <span class="k">"statusCode"</span>: <span class="n">200</span> <span class="k">}</span>, <span class="k">"msg"</span>: <span class="s">"request completed"</span>
+<span class="k">}</span></div>
+        <div class="impl-tag">✦ pinoHttp({ logger, genReqId: (req) => req.headers['x-correlation-id'] || uuid() })</div>
+      </div>
+    </div>
+
+  </div><!-- /cards -->
+
+  <!-- IMPLEMENTATION DETAIL -->
+  <div class="section-title">Implementation — How Each Service Handles Correlation IDs</div>
+  <div class="impl-cards">
+
+    <div class="impl-card">
+      <div class="impl-card-header">
+        <span style="color:var(--orange)">☕</span>
+        Spring Boot — CorrelationIdFilter.java
+      </div>
+      <div class="impl-card-body">
+        <div class="code-block"><span class="ann">@Component</span> <span class="ann">@Order(1)</span>
+<span class="kw">public class</span> <span class="fn">CorrelationIdFilter</span>
+    <span class="kw">extends</span> <span class="fn">OncePerRequestFilter</span> {
+
+  <span class="kw">static final</span> String HEADER = <span class="str">"X-Correlation-Id"</span>;
+
+  <span class="ann">@Override</span>
+  <span class="kw">protected void</span> <span class="fn">doFilterInternal</span>(
+      HttpServletRequest req,
+      HttpServletResponse res,
+      FilterChain chain) <span class="kw">throws</span> ... {
+
+    String cid = req.getHeader(HEADER);
+    <span class="kw">if</span> (cid == <span class="kw">null</span>) cid = UUID.<span class="fn">randomUUID</span>().toString();
+
+    MDC.<span class="fn">put</span>(<span class="str">"correlationId"</span>, cid);
+    res.<span class="fn">setHeader</span>(HEADER, cid);
+    <span class="kw">try</span> { chain.<span class="fn">doFilter</span>(req, res); }
+    <span class="kw">finally</span> { MDC.<span class="fn">clear</span>(); }
+  }
+}</div>
+      </div>
+    </div>
+
+    <div class="impl-card">
+      <div class="impl-card-header">
+        <span style="color:var(--orange)">☕</span>
+        Spring Boot — logback-spring.xml
+      </div>
+      <div class="impl-card-body">
+        <div class="code-block"><span class="com">&lt;!-- logback-spring.xml --&gt;</span>
+&lt;<span class="kw">appender</span> name=<span class="str">"CONSOLE"</span>
+  class=<span class="str">"ConsoleAppender"</span>&gt;
+  &lt;<span class="kw">encoder</span> class=<span class="str">"LogstashEncoder"</span>&gt;
+
+    &lt;<span class="fn">customFields</span>&gt;
+      {<span class="str">"service"</span>:<span class="str">"${appName}"</span>}
+    &lt;/<span class="fn">customFields</span>&gt;
+
+    <span class="com">&lt;!-- pulls from MDC automatically --&gt;</span>
+    &lt;<span class="fn">includeMdcKeyName</span>&gt;
+      correlationId
+    &lt;/<span class="fn">includeMdcKeyName</span>&gt;
+
+  &lt;/<span class="kw">encoder</span>&gt;
+&lt;/<span class="kw">appender</span>&gt;</div>
+      </div>
+    </div>
+
+    <div class="impl-card">
+      <div class="impl-card-header">
+        <span style="color:var(--green)">🐍</span>
+        FastAPI — correlation middleware
+      </div>
+      <div class="impl-card-body">
+        <div class="code-block"><span class="com"># main.py (user-service, catalog-service)</span>
+<span class="ann">@app.middleware("http")</span>
+<span class="kw">async def</span> <span class="fn">correlation_id</span>(
+    request: Request, call_next):
+
+  cid = request.headers.<span class="fn">get</span>(
+    <span class="str">"X-Correlation-Id"</span>,
+    str(uuid.<span class="fn">uuid4</span>())      <span class="com"># auto-generate</span>
+  )
+  response = <span class="kw">await</span> <span class="fn">call_next</span>(request)
+  response.headers[<span class="str">"X-Correlation-Id"</span>] = cid
+
+  logger.<span class="fn">info</span>(<span class="str">"request"</span>, extra={
+    <span class="str">"cid"</span>:    cid,
+    <span class="str">"path"</span>:   request.url.path,
+    <span class="str">"method"</span>: request.method,
+    <span class="str">"status"</span>: response.status_code,
+  })
+  <span class="kw">return</span> response</div>
+      </div>
+    </div>
+
+    <div class="impl-card">
+      <div class="impl-card-header">
+        <span style="color:var(--blue)">⬡</span>
+        Node.js — pino-http genReqId
+      </div>
+      <div class="impl-card-body">
+        <div class="code-block"><span class="com">// logger.js (seating-service)</span>
+<span class="kw">const</span> logger = <span class="fn">pino</span>({
+  level: <span class="str">'info'</span>,
+  base: { service: <span class="str">'seating-service'</span> }
+});
+
+<span class="kw">const</span> httpLogger = <span class="fn">pinoHttp</span>({
+  logger,
+
+  <span class="com">// extract or generate CID</span>
+  <span class="fn">genReqId</span>: (req) =>
+    req.headers[<span class="str">'x-correlation-id'</span>]
+    || <span class="fn">uuid</span>(),
+
+  <span class="com">// expose as top-level "cid" field</span>
+  <span class="fn">customProps</span>: (req) =>
+    ({ cid: req.id }),
+});</div>
+      </div>
+    </div>
+
+    <div class="impl-card">
+      <div class="impl-card-header">
+        <span style="color:var(--orange)">☕</span>
+        Spring Boot — pom.xml dependency
+      </div>
+      <div class="impl-card-body">
+        <div class="code-block"><span class="com">&lt;!-- order-service/pom.xml
+     payment-service/pom.xml --&gt;</span>
+&lt;<span class="kw">dependency</span>&gt;
+  &lt;<span class="fn">groupId</span>&gt;
+    net.logstash.logback
+  &lt;/<span class="fn">groupId</span>&gt;
+  &lt;<span class="fn">artifactId</span>&gt;
+    logstash-logback-encoder
+  &lt;/<span class="fn">artifactId</span>&gt;
+  &lt;<span class="fn">version</span>&gt;7.4&lt;/<span class="fn">version</span>&gt;
+&lt;/<span class="kw">dependency</span>&gt;
+
+<span class="com">&lt;!-- Spring Boot 3.2.5 ships Logback
+     — encoder replaces default pattern
+     with structured JSON output --&gt;</span></div>
+      </div>
+    </div>
+
+    <div class="impl-card">
+      <div class="impl-card-header">
+        🔗 curl — sending correlation ID
+      </div>
+      <div class="impl-card-body">
+        <div class="code-block"><span class="com"># 1 — register user</span>
+curl -X POST .../v1/users \
+  -H <span class="str">'X-Correlation-Id: TRACE-1777318229-DEMO'</span>
+
+<span class="com"># 2 — place order</span>
+curl -X POST .../v1/orders \
+  -H <span class="str">'X-Correlation-Id: TRACE-1777318229-DEMO'</span>
+
+<span class="com"># 3 — charge payment</span>
+curl -X POST .../v1/payments/charge \
+  -H <span class="str">'Idempotency-Key: TRACE-1777318229-pay'</span> \
+  -H <span class="str">'X-Correlation-Id: TRACE-1777318229-DEMO'</span>
+
+<span class="com"># grep logs across all pods:</span>
+kubectl logs -n seatsavvy \
+  deployment/order-service \
+  | grep <span class="str">'TRACE-1777318229-DEMO'</span></div>
+      </div>
+    </div>
+
+  </div><!-- /impl-cards -->
+
+  <!-- SUMMARY ROW -->
+  <div class="section-title">Summary</div>
+  <div class="summary-grid">
+    <div class="sum-card">
+      <div class="sum-val" style="color:var(--green)">6</div>
+      <div class="sum-label">Services instrumented</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-val" style="color:var(--cid)">1</div>
+      <div class="sum-label">Correlation ID per request chain</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-val" style="color:var(--blue)">3</div>
+      <div class="sum-label">Techniques used<br><small style="font-size:.55rem;font-weight:400">MDC · Middleware · genReqId</small></div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-val" style="color:var(--purple)">JSON</div>
+      <div class="sum-label">All logs structured<br><small style="font-size:.55rem;font-weight:400">Logstash · python-json-logger · Pino</small></div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<div class="footer">
+  Generated: <span>Mon Apr 28 2026</span> &nbsp;·&nbsp;
+  Correlation ID: <span>TRACE-1777318229-DEMO</span> &nbsp;·&nbsp;
+  Order: <span>#406</span> &nbsp;·&nbsp;
+  Payment: <span>PAY1777318232354-03074086 · SUCCESS</span> &nbsp;·&nbsp;
+  Namespace: <span>seatsavvy</span>
+</div>
+
+</body>
+</html>

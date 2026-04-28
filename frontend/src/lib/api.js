@@ -10,6 +10,10 @@ export const ordersAPI        = make(import.meta.env.VITE_ORDERS_API_URL        
 export const paymentsAPI      = make(import.meta.env.VITE_PAYMENTS_API_URL      || '/api/payments')
 export const notificationsAPI = make(import.meta.env.VITE_NOTIFICATIONS_API_URL || '/api/notifications')
 
+// ── Notifications ─────────────────────────────────────────────────────────────
+export const getUserNotifications = (userId) =>
+  notificationsAPI.get('/v1/notifications', { params: { userId, limit: 50 } })
+
 // ── Users ────────────────────────────────────────────────────────────────────
 export const loginUser    = (email, password) =>
   usersAPI.post('/v1/users/login', { email, password })
@@ -17,12 +21,15 @@ export const registerUser = (data) =>
   usersAPI.post('/v1/users', data)
 export const getUser      = (id) =>
   usersAPI.get(`/v1/users/${id}`)
+export const listUsers    = (limit = 100) =>
+  usersAPI.get('/v1/users', { params: { limit } })
 
 // ── Catalog ──────────────────────────────────────────────────────────────────
 export const getEvents    = (params) => catalogAPI.get('/v1/events', { params })
 export const getEvent     = (id)     => catalogAPI.get(`/v1/events/${id}`)
 export const getEventSeats = (id)    => catalogAPI.get(`/v1/events/${id}/seats`)
 export const getVenues    = (params) => catalogAPI.get('/v1/venues', { params })
+export const getVenue     = (id)     => catalogAPI.get(`/v1/venues/${id}`)
 
 // ── Seating ──────────────────────────────────────────────────────────────────
 export const getSeatAvailability = (eventId) =>

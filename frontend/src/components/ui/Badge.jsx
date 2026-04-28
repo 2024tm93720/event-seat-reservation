@@ -2,12 +2,12 @@ import { cn } from '../../lib/utils'
 
 const VARIANTS = {
   default:     'bg-secondary text-secondary-foreground',
-  success:     'bg-success/15 text-success border border-success/30',
-  destructive: 'bg-destructive/15 text-destructive border border-destructive/30',
-  warning:     'bg-warning/15 text-warning border border-warning/30',
-  secondary:   'bg-secondary text-muted-foreground border border-border',
+  success:     'bg-emerald-50 text-emerald-700 border border-emerald-200',
+  destructive: 'bg-red-50 text-red-700 border border-red-200',
+  warning:     'bg-amber-50 text-amber-700 border border-amber-200',
+  secondary:   'bg-slate-100 text-slate-600 border border-slate-200',
   outline:     'border border-border text-foreground bg-transparent',
-  primary:     'bg-primary/10 text-primary border border-primary/30',
+  primary:     'bg-indigo-50 text-indigo-700 border border-indigo-200',
 }
 
 export function Badge({ children, variant = 'default', className }) {

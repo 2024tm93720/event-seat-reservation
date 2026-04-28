@@ -2,6 +2,8 @@ package com.ticketing.payment.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.time.Instant;
 
@@ -36,6 +38,7 @@ public class Payment {
 
     private String failureReason;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private String gatewayResponse;
 
