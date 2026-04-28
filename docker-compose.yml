@@ -196,11 +196,26 @@ services:
   notification-service:
     build: ./notification-service
     environment:
-      DATABASE_URL: mysql://notify:pass@notification-db:3306/notification_db
+      DATABASE_URL:     mysql://notify:pass@notification-db:3306/notification_db
+      RABBIT_URL:       amqp://guest:guest@rabbitmq:5672
+      ORDER_SVC_URL:    http://order-service:8965
+      USER_SVC_URL:     http://user-service:8001
+      CATALOG_SVC_URL:  http://catalog-service:8002
+      OVERRIDE_EMAIL:   deenbenny@gmail.com
+      SMTP_USER:        ""   # your Gmail address  e.g. yourname@gmail.com
+      SMTP_PASS:        ""   # Gmail App Password  (Gmail → Security → App Passwords)
     ports: ["8006:8006"]
     depends_on:
       notification-db:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      order-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+      catalog-service:
+        condition: service_started
 
   # ---------------- Frontend ----------------
   frontend:

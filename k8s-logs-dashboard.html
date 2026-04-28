@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SeatSavvy — kubectl logs Dashboard</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0d1117;
+    color: #c9d1d9;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.55;
+    padding: 28px 32px 40px;
+    min-height: 100vh;
+  }
+
+  /* ── header ── */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #21262d;
+  }
+  .header-icon {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .header-text h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #f0f6fc;
+    letter-spacing: -0.3px;
+  }
+  .header-text p {
+    font-size: 12px;
+    color: #8b949e;
+    margin-top: 2px;
+  }
+  .header-badges {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-green  { background: #1a3a2a; color: #3fb950; border: 1px solid #238636; }
+  .badge-purple { background: #271c45; color: #a78bfa; border: 1px solid #6d28d9; }
+  .badge-blue   { background: #0d2136; color: #58a6ff; border: 1px solid #1d4f8b; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; display: inline-block; }
+
+  /* ── cluster bar ── */
+  .cluster-bar {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    background: #161b22;
+    border: 1px solid #21262d;
+    border-radius: 8px;
+    padding: 10px 18px;
+    margin-bottom: 24px;
+    font-size: 11px;
+  }
+  .cluster-bar .label { color: #8b949e; }
+  .cluster-bar .val   { color: #f0f6fc; font-weight: 600; }
+  .cluster-bar .sep   { color: #30363d; }
+
+  /* ── grid ── */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+
+  /* ── card ── */
+  .card {
+    background: #161b22;
+    border: 1px solid #21262d;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 16px;
+    border-bottom: 1px solid #21262d;
+    background: #0d1117;
+  }
+  .svc-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .svc-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #f0f6fc;
+  }
+  .svc-tag {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  .tag-python   { background: #0d2940; color: #79c0ff; }
+  .tag-node     { background: #1a3a20; color: #56d364; }
+  .tag-spring   { background: #2a1a14; color: #f0883e; }
+  .tag-nginx    { background: #1e2a1a; color: #7ee787; }
+  .tag-rabbitmq { background: #2a1a2a; color: #e879f9; }
+
+  .pod-label {
+    margin-left: auto;
+    font-size: 10px;
+    color: #6e7681;
+    background: #21262d;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-family: inherit;
+  }
+
+  .cmd-bar {
+    background: #010409;
+    border-bottom: 1px solid #21262d;
+    padding: 7px 16px;
+    font-size: 11px;
+    color: #3fb950;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cmd-bar .prompt { color: #484f58; }
+  .cmd-bar .cmd    { color: #7ee787; }
+
+  .log-body {
+    padding: 12px 16px;
+    height: 230px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #21262d transparent;
+  }
+  .log-body::-webkit-scrollbar { width: 4px; }
+  .log-body::-webkit-scrollbar-track { background: transparent; }
+  .log-body::-webkit-scrollbar-thumb { background: #21262d; border-radius: 2px; }
+
+  .log-line {
+    display: flex;
+    gap: 10px;
+    padding: 2px 0;
+    align-items: flex-start;
+    line-height: 1.5;
+  }
+  .log-line:hover { background: rgba(255,255,255,0.03); border-radius: 3px; }
+  .log-line + .log-line { margin-top: 1px; }
+
+  .ln { color: #484f58; min-width: 20px; text-align: right; user-select: none; flex-shrink: 0; font-size: 10px; padding-top: 1px; }
+  .lc { flex: 1; word-break: break-all; }
+
+  /* log level colours */
+  .ll-info    { color: #3fb950; }
+  .ll-debug   { color: #58a6ff; }
+  .ll-warn    { color: #d29922; }
+  .ll-error   { color: #f85149; }
+
+  /* token colours */
+  .t-key     { color: #79c0ff; }
+  .t-str     { color: #a5d6ff; }
+  .t-num     { color: #f0883e; }
+  .t-time    { color: #6e7681; }
+  .t-method  { color: #7ee787; }
+  .t-status  { color: #3fb950; }
+  .t-path    { color: #d2a8ff; }
+  .t-svc     { color: #e8e8e8; font-weight: 600; }
+  .t-ip      { color: #6e7681; }
+  .t-sba     { color: #f0883e; }
+  .t-sbthread{ color: #8b949e; }
+  .t-sbclass { color: #79c0ff; }
+  .t-sbmsg   { color: #c9d1d9; }
+  .t-rmq     { color: #e879f9; }
+  .t-rmq-warn{ color: #d29922; }
+  .t-amqp    { color: #a78bfa; }
+  .t-hl      { color: #f0f6fc; font-weight: 700; background: rgba(79,70,229,0.18); padding: 0 3px; border-radius: 3px; }
+
+  /* ── footer ── */
+  .footer {
+    margin-top: 28px;
+    padding-top: 16px;
+    border-top: 1px solid #21262d;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: #484f58;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ─────────────────────────────────────────────────────────────── -->
+<div class="header">
+  <div class="header-icon">🎫</div>
+  <div class="header-text">
+    <h1>SeatSavvy — kubectl logs</h1>
+    <p>Kubernetes Namespace: <strong style="color:#a78bfa">seatsavvy</strong> &nbsp;·&nbsp; Cluster: minikube &nbsp;·&nbsp; Captured: Mon 27 Apr 2026 18:28 UTC</p>
+  </div>
+  <div class="header-badges">
+    <span class="badge badge-green"><span class="dot"></span> 16 / 16 Running</span>
+    <span class="badge badge-purple">0 Restarts</span>
+    <span class="badge badge-blue">Minikube v1.35</span>
+  </div>
+</div>
+
+<!-- ── CLUSTER BAR ─────────────────────────────────────────────────────────── -->
+<div class="cluster-bar">
+  <span><span class="label">NAMESPACE </span><span class="val">seatsavvy</span></span>
+  <span class="sep">|</span>
+  <span><span class="label">PODS </span><span class="val">16</span></span>
+  <span class="sep">|</span>
+  <span><span class="label">SERVICES </span><span class="val">6 app + 2 infra + 2 monitoring</span></span>
+  <span class="sep">|</span>
+  <span><span class="label">CMD </span><span class="val">kubectl logs -n seatsavvy deployment/&lt;name&gt; --tail=10</span></span>
+</div>
+
+<!-- ── LOG GRID ───────────────────────────────────────────────────────────── -->
+<div class="grid">
+
+  <!-- ── 1. USER SERVICE ──────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-header">
+      <div class="svc-dot" style="background:#3fb950"></div>
+      <span class="svc-name">user-service</span>
+      <span class="svc-tag tag-python">Python / FastAPI</span>
+      <span class="pod-label">user-service-74bb6bd659-btcnz</span>
+    </div>
+    <div class="cmd-bar">
+      <span class="prompt">$</span>
+      <span class="cmd">kubectl logs -n seatsavvy deployment/user-service --tail=10</span>
+    </div>
+    <div class="log-body">
+      <div class="log-line"><span class="ln">1</span><span class="lc"><span class="t-time">{"asctime":"2026-04-27 18:28:07"</span> <span class="t-key">"levelname"</span>:<span class="t-str">"INFO"</span> <span class="t-key">"name"</span>:<span class="t-svc">"user-service"</span> <span class="t-key">"message"</span>:<span class="t-str">"request"</span> <span class="t-key">"path"</span>:<span class="t-path">"/health"</span> <span class="t-key">"method"</span>:<span class="t-method">GET</span> <span class="t-key">"status"</span>:<span class="t-status">200</span>}</span></div>
+      <div class="log-line"><span class="ln">2</span><span class="lc"><span class="ll-info">INFO</span>:&nbsp;&nbsp;&nbsp;&nbsp; <span class="t-ip">10.244.0.1:59328</span> - <span class="t-method">"GET</span> <span class="t-path">/health</span> HTTP/1.1<span class="t-method">"</span> <span class="t-status">200 OK</span></span></div>
+      <div class="log-line"><span class="ln">3</span><span class="lc"><span class="t-time">{"asctime":"2026-04-27 18:28:17"</span> <span class="t-key">"levelname"</span>:<span class="t-str">"INFO"</span> <span class="t-key">"name"</span>:<span class="t-svc">"user-service"</span> <span class="t-key">"path"</span>:<span class="t-path">"/health"</span> <span class="t-key">"status"</span>:<span class="t-status">200</span>}</span></div>
+      <div class="log-line"><span class="ln">4</span><span class="lc"><span class="ll-info">INFO</span>:&nbsp;&nbsp;&nbsp;&nbsp; <span class="t-ip">10.244.0.1:33252</span> - <span class="t-method">"GET</span> <span class="t-path">/health</span> HTTP/1.1<span class="t-method">"</span> <span class="t-status">200 OK</span></span></div>
+      <div class="log-line"><span class="ln">5</span><span class="lc"><span class="ll-info">INFO</span>:&nbsp;&nbsp;&nbsp;&nbsp; <span class="t-ip">10.244.0.17:38384</span> - <span class="t-method">"GET</span> <span class="t-path">/metrics</span> HTTP/1.1<span class="t-method">"</span> <span class="t-status">200 OK</span></span></div>
+      <div class="log-line"><span class="ln">6</span><span class="lc"><span class="t-time">{"asctime":"2026-04-27 18:28:20"</span> <span class="t-key">"levelname"</span>:<span class="t-str">"INFO"</span> <span class="t-key">"name"</span>:<span class="t-svc">"user-service"</span> <span class="t-key">"path"</span>:<span class="t-path">"/metrics"</span> <span class="t-key">"status"</span>:<span class="t-status">200</span>}</span></div>
+      <div class="log-line"><span class="ln">7</span><span class="lc"><span class="t-time">{"asctime":"2026-04-27 18:28:26"</span> <span class="t-key">"levelname"</span>:<span class="t-str">"INFO"</span> <span class="t-key">"name"</span>:<span class="t-svc">"user-service"</span> <span class="t-key">"path"</span>:<span class="t-path">"/health"</span> <span class="t-key">"status"</span>:<span class="t-status">200</span>}</span></div>
+      <div class="log-line"><span class="ln">8</span><span class="lc"><span class="ll-info">INFO</span>:&nbsp;&nbsp;&nbsp;&nbsp; <span class="t-ip">10.244.0.1:33262</span> - <span class="t-method">"GET</span> <span class="t-path">/health</span> HTTP/1.1<span class="t-method">"</span> <span class="t-status">200 OK</span></span></div>
+      <div class="log-line"><span class="ln">9</span><span class="lc"><span class="t-time">{"asctime":"2026-04-27 18:28:27"</span> <span class="t-key">"levelname"</span>:<span class="t-str">"INFO"</span> <span class="t-key">"name"</span>:<span class="t-svc">"user-service"</span> <span class="t-key">"path"</span>:<span class="t-path">"/health"</span> <span class="t-key">"status"</span>:<span class="t-status">200</span>}</span></div>
+      <div class="log-line"><span class="ln">10</span><span class="lc"><span class="ll-info">INFO</span>:&nbsp;&nbsp;&nbsp;&nbsp; <span class="t-ip">10.244.0.1:42536</span> - <span class="t-method">"GET</span> <span class="t-path">/health</span> HTTP/1.1<span class="t-method">"</span> <span class="t-status">200 OK</span></span></div>
+    </div>
+  </div>
+
+  <!-- ── 2. CATALOG SERVICE ────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-header">
+      <div class="svc-dot" style="background:#3fb950"></div>
+      <span class="svc-name">catalog-service</span>
+      <span class="svc-tag tag-python">Python / FastAPI</span>
+      <span class="pod-label">catalog-service-789df67cbc-btcqr</span>
+    </div>
+    <div class="cmd-bar">
+      <span class="prompt">$</span>
+      <span class="cmd">kubectl logs -n seatsavvy deployment/catalog-service --tail=10</span>
+    </div>
+    <div class="log-body">
+      <div class="log-line"><span class="ln">1</span><span class="lc"><span class="t-time">{"asctime":"2026-04-27 18:28:07"</span> <span class="t-key">"levelname"</span>:<span class="t-str">"INFO"</span> <span class="t-key">"name"</span>:<span class="t-svc">"catalog-service"</span> <span class="t-key">"path"</span>:<span class="t-path">"/health"</span> <span class="t-key">"status"</span>:<span class="t-status">200</span>}</span></div>
+      <div class="log-line"><span class="ln">2</span><span class="lc"><span class="ll-info">INFO</span>:&nbsp;&nbsp;&nbsp;&nbsp; <span class="t-ip">10.244.0.1:58878</span> - <span class="t-method">"GET</span> <span class="t-path">/health</span> HTTP/1.1<span class="t-method">"</span> <span class="t-status">200 OK</span></span></div>
+      <div class="log-line"><span class="ln">3</span><span class="lc"><span class="t-time">{"asctime":"2026-04-27 18:28:17"</span> <span class="t-key">"levelname"</span>:<span class="t-str">"INFO"</span> <span class="t-key">"name"</span>:<span class="t-svc">"catalog-service"</span> <span class="t-key">"path"</span>:<span class="t-path">"/health"</span> <span class="t-key">"status"</span>:<span class="t-status">200</span>}</span></div>
+      <div class="log-line"><span class="ln">4</span><span class="lc"><span class="ll-info">INFO</span>:&nbsp;&nbsp;&nbsp;&nbsp; <span class="t-ip">10.244.0.1:47182</span> - <span class="t-method">"GET</span> <span class="t-path">/health</span> HTTP/1.1<span class="t-method">"</span> <span class="t-status">200 OK</span></span></div>
+      <div class="log-line"><span class="ln">5</span><span class="lc"><span class="t-time">{"asctime":"2026-04-27 18:28:21"</span> <span class="t-key">"levelname"</span>:<span class="t-str">"INFO"</span> <span class="t-key">"name"</span>:<span class="t-svc">"catalog-service"</span> <span class="t-key">"path"</span>:<span class="t-path">"/metrics"</span> <span class="t-key">"status"</span>:<span class="t-status">200</span>}</span></div>
+      <div class="log-line"><span class="ln">6</span><span class="lc"><span class="ll-info">INFO</span>:&nbsp;&nbsp;&nbsp;&nbsp; <span class="t-ip">10.244.0.17:59884</span> - <span class="t-method">"GET</span> <span class="t-path">/metrics</span> HTTP/1.1<span class="t-method">"</span> <span class="t-status">200 OK</span></span></div>
+      <div class="log-line"><span class="ln">7</span><span class="lc"><span class="t-time">{"asctime":"2026-04-27 18:28:25"</span> <span class="t-key">"levelname"</span>:<span class="t-str">"INFO"</span> <span class="t-key">"name"</span>:<span class="t-svc">"catalog-service"</span> <span class="t-key">"path"</span>:<span class="t-path">"/health"</span> <span class="t-key">"status"</span>:<span class="t-status">200</span>}</span></div>
+      <div class="log-line"><span class="ln">8</span><span class="lc"><span class="ll-info">INFO</span>:&nbsp;&nbsp;&nbsp;&nbsp; <span class="t-ip">10.244.0.1:47184</span> - <span class="t-method">"GET</span> <span class="t-path">/health</span> HTTP/1.1<span class="t-method">"</span> <span class="t-status">200 OK</span></span></div>
+      <div class="log-line"><span class="ln">9</span><span class="lc"><span class="t-time">{"asctime":"2026-04-27 18:28:27"</span> <span class="t-key">"levelname"</span>:<span class="t-str">"INFO"</span> <span class="t-key">"name"</span>:<span class="t-svc">"catalog-service"</span> <span class="t-key">"path"</span>:<span class="t-path">"/health"</span> <span class="t-key">"status"</span>:<span class="t-status">200</span>}</span></div>
+      <div class="log-line"><span class="ln">10</span><span class="lc"><span class="ll-info">INFO</span>:&nbsp;&nbsp;&nbsp;&nbsp; <span class="t-ip">10.244.0.1:36614</span> - <span class="t-method">"GET</span> <span class="t-path">/health</span> HTTP/1.1<span class="t-method">"</span> <span class="t-status">200 OK</span></span></div>
+    </div>
+  </div>
+
+  <!-- ── 3. SEATING SERVICE ────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-header">
+      <div class="svc-dot" style="background:#3fb950"></div>
+      <span class="svc-name">seating-service</span>
+      <span class="svc-tag tag-node">Node.js / Express</span>
+      <span class="pod-label">seating-service-7db486485d-s4z7f</span>
+    </div>
+    <div class="cmd-bar">
+      <span class="prompt">$</span>
+      <span class="cmd">kubectl logs -n seatsavvy deployment/seating-service --tail=10</span>
+    </div>
+    <div class="log-body">
+      <div class="log-line"><span class="ln">1</span><span class="lc"><span class="ll-info">{"level":30</span> <span class="t-key">"time"</span>:<span class="t-num">1777314467</span> <span class="t-key">"service"</span>:<span class="t-svc">"seating-service"</span> <span class="t-key">"method"</span>:<span class="t-method">"GET"</span> <span class="t-key">"url"</span>:<span class="t-path">"/health"</span> <span class="t-key">"statusCode"</span>:<span class="t-status">200</span> <span class="t-key">"responseTime"</span>:<span class="t-num">13</span> <span class="t-key">"msg"</span>:<span class="t-str">"request completed"</span>}</span></div>
+      <div class="log-line"><span class="ln">2</span><span class="lc"><span class="ll-info">{"level":30</span> <span class="t-key">"time"</span>:<span class="t-num">1777314474</span> <span class="t-key">"service"</span>:<span class="t-svc">"seating-service"</span> <span class="t-key">"method"</span>:<span class="t-method">"GET"</span> <span class="t-key">"url"</span>:<span class="t-path">"/metrics"</span> <span class="t-key">"user-agent"</span>:<span class="t-str">"Prometheus/2.54.1"</span> <span class="t-key">"statusCode"</span>:<span class="t-status">200</span> <span class="t-key">"responseTime"</span>:<span class="t-num">11</span>}</span></div>
+      <div class="log-line"><span class="ln">3</span><span class="lc"><span class="ll-info">{"level":30</span> <span class="t-key">"time"</span>:<span class="t-num">1777314477</span> <span class="t-key">"service"</span>:<span class="t-svc">"seating-service"</span> <span class="t-key">"method"</span>:<span class="t-method">"GET"</span> <span class="t-key">"url"</span>:<span class="t-path">"/health"</span> <span class="t-key">"statusCode"</span>:<span class="t-status">200</span> <span class="t-key">"responseTime"</span>:<span class="t-num">11</span>}</span></div>
+      <div class="log-line"><span class="ln">4</span><span class="lc"><span class="ll-info">{"level":30</span> <span class="t-key">"time"</span>:<span class="t-num">1777314486</span> <span class="t-key">"service"</span>:<span class="t-svc">"seating-service"</span> <span class="t-key">"method"</span>:<span class="t-method">"GET"</span> <span class="t-key">"url"</span>:<span class="t-path">"/health"</span> <span class="t-key">"statusCode"</span>:<span class="t-status">200</span> <span class="t-key">"responseTime"</span>:<span class="t-num">4</span>}</span></div>
+      <div class="log-line"><span class="ln">5</span><span class="lc"><span class="ll-info">{"level":30</span> <span class="t-key">"time"</span>:<span class="t-num">1777314487</span> <span class="t-key">"service"</span>:<span class="t-svc">"seating-service"</span> <span class="t-key">"method"</span>:<span class="t-method">"GET"</span> <span class="t-key">"url"</span>:<span class="t-path">"/health"</span> <span class="t-key">"statusCode"</span>:<span class="t-status">200</span> <span class="t-key">"responseTime"</span>:<span class="t-num">2</span>}</span></div>
+      <div class="log-line"><span class="ln">6</span><span class="lc"><span class="ll-info">{"level":30</span> <span class="t-key">"time"</span>:<span class="t-num">1777314489</span> <span class="t-key">"service"</span>:<span class="t-svc">"seating-service"</span> <span class="t-key">"method"</span>:<span class="t-method">"GET"</span> <span class="t-key">"url"</span>:<span class="t-path">"/metrics"</span> <span class="t-key">"user-agent"</span>:<span class="t-str">"Prometheus/2.54.1"</span> <span class="t-key">"responseTime"</span>:<span class="t-num">83</span>}</span></div>
+      <div class="log-line"><span class="ln">7</span><span class="lc"><span class="ll-info">{"level":30</span> <span class="t-key">"time"</span>:<span class="t-num">1777314497</span> <span class="t-key">"service"</span>:<span class="t-svc">"seating-service"</span> <span class="t-key">"method"</span>:<span class="t-method">"GET"</span> <span class="t-key">"url"</span>:<span class="t-path">"/health"</span> <span class="t-key">"statusCode"</span>:<span class="t-status">200</span> <span class="t-key">"responseTime"</span>:<span class="t-num">12</span>}</span></div>
+      <div class="log-line"><span class="ln">8</span><span class="lc"><span class="ll-info">{"level":30</span> <span class="t-key">"time"</span>:<span class="t-num">1777314504</span> <span class="t-key">"service"</span>:<span class="t-svc">"seating-service"</span> <span class="t-key">"method"</span>:<span class="t-method">"GET"</span> <span class="t-key">"url"</span>:<span class="t-path">"/metrics"</span> <span class="t-key">"user-agent"</span>:<span class="t-str">"Prometheus/2.54.1"</span> <span class="t-key">"responseTime"</span>:<span class="t-num">8</span>}</span></div>
+      <div class="log-line"><span class="ln">9</span><span class="lc"><span class="ll-info">{"level":30</span> <span class="t-key">"time"</span>:<span class="t-num">1777314506</span> <span class="t-key">"service"</span>:<span class="t-svc">"seating-service"</span> <span class="t-key">"method"</span>:<span class="t-method">"GET"</span> <span class="t-key">"url"</span>:<span class="t-path">"/health"</span> <span class="t-key">"statusCode"</span>:<span class="t-status">200</span> <span class="t-key">"responseTime"</span>:<span class="t-num">4</span>}</span></div>
+      <div class="log-line"><span class="ln">10</span><span class="lc"><span class="ll-info">{"level":30</span> <span class="t-key">"time"</span>:<span class="t-num">1777314507</span> <span class="t-key">"service"</span>:<span class="t-svc">"seating-service"</span> <span class="t-key">"method"</span>:<span class="t-method">"GET"</span> <span class="t-key">"url"</span>:<span class="t-path">"/health"</span> <span class="t-key">"statusCode"</span>:<span class="t-status">200</span> <span class="t-key">"responseTime"</span>:<span class="t-num">2</span>}</span></div>
+    </div>
+  </div>
+
+  <!-- ── 4. NOTIFICATION SERVICE ───────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-header">
+      <div class="svc-dot" style="background:#3fb950"></div>
+      <span class="svc-name">notification-service</span>
+      <span class="svc-tag tag-node">Node.js / Express</span>
+      <span class="pod-label">notification-service-67dc8c9bff-p46q2</span>
+    </div>
+    <div class="cmd-bar">
+      <span class="prompt">$</span>
+      <span class="cmd">kubectl logs -n seatsavvy deployment/notification-service --tail=10</span>
+    </div>
+    <div class="log-body">
+      <div class="log-line"><span class="ln">1</span><span class="lc"><span class="ll-info">{"level":30</span> <span class="t-key">"time"</span>:<span class="t-num">1777314467</span> <span class="t-key">"service"</span>:<span class="t-svc">"notification-service"</span> <span class="t-key">"method"</span>:<span class="t-method">"GET"</span> <span class="t-key">"url"</span>:<span class="t-path">"/health"</span> <span class="t-key">"statusCode"</span>:<span class="t-status">200</span> <span class="t-key">"responseTime"</span>:<span class="t-num">9</span>}</span></div>
+      <div class="log-line"><span class="ln">2</span><span class="lc"><span class="ll-info">{"level":30</span> <span class="t-key">"time"</span>:<span class="t-num">1777314477</span> <span class="t-key">"service"</span>:<span class="t-svc">"notification-service"</span> <span class="t-key">"method"</span>:<span class="t-method">"GET"</span> <span class="t-key">"url"</span>:<span class="t-path">"/metrics"</span> <span class="t-key">"user-agent"</span>:<span class="t-str">"Prometheus/2.54.1"</span> <span class="t-key">"responseTime"</span>:<span class="t-num">7</span>}</span></div>
+      <div class="log-line"><span class="ln">3</span><span class="lc"><span class="ll-info">{"level":30</span> <span class="t-key">"time"</span>:<span class="t-num">1777314477</span> <span class="t-key">"service"</span>:<span class="t-svc">"notification-service"</span> <span class="t-key">"method"</span>:<span class="t-method">"GET"</span> <span class="t-key">"url"</span>:<span class="t-path">"/health"</span> <span class="t-key">"statusCode"</span>:<span class="t-status">200</span> <span class="t-key">"responseTime"</span>:<span class="t-num">11</span>}</span></div>
+      <div class="log-line"><span class="ln">4</span><span class="lc"><span class="ll-info">{"level":30</span> <span class="t-key">"time"</span>:<span class="t-num">1777314486</span> <span class="t-key">"service"</span>:<span class="t-svc">"notification-service"</span> <span class="t-key">"method"</span>:<span class="t-method">"GET"</span> <span class="t-key">"url"</span>:<span class="t-path">"/health"</span> <span class="t-key">"statusCode"</span>:<span class="t-status">200</span> <span class="t-key">"responseTime"</span>:<span class="t-num">4</span>}</span></div>
+      <div class="log-line"><span class="ln">5</span><span class="lc"><span class="ll-info">{"level":30</span> <span class="t-key">"time"</span>:<span class="t-num">1777314487</span> <span class="t-key">"service"</span>:<span class="t-svc">"notification-service"</span> <span class="t-key">"method"</span>:<span class="t-method">"GET"</span> <span class="t-key">"url"</span>:<span class="t-path">"/health"</span> <span class="t-key">"statusCode"</span>:<span class="t-status">200</span> <span class="t-key">"responseTime"</span>:<span class="t-num">2</span>}</span></div>
+      <div class="log-line"><span class="ln">6</span><span class="lc"><span class="ll-info">{"level":30</span> <span class="t-key">"time"</span>:<span class="t-num">1777314492</span> <span class="t-key">"service"</span>:<span class="t-svc">"notification-service"</span> <span class="t-key">"method"</span>:<span class="t-method">"GET"</span> <span class="t-key">"url"</span>:<span class="t-path">"/metrics"</span> <span class="t-key">"user-agent"</span>:<span class="t-str">"Prometheus/2.54.1"</span> <span class="t-key">"responseTime"</span>:<span class="t-num">11</span>}</span></div>
+      <div class="log-line"><span class="ln">7</span><span class="lc"><span class="ll-info">{"level":30</span> <span class="t-key">"time"</span>:<span class="t-num">1777314497</span> <span class="t-key">"service"</span>:<span class="t-svc">"notification-service"</span> <span class="t-key">"method"</span>:<span class="t-method">"GET"</span> <span class="t-key">"url"</span>:<span class="t-path">"/health"</span> <span class="t-key">"statusCode"</span>:<span class="t-status">200</span> <span class="t-key">"responseTime"</span>:<span class="t-num">14</span>}</span></div>
+      <div class="log-line"><span class="ln">8</span><span class="lc"><span class="ll-info">{"level":30</span> <span class="t-key">"time"</span>:<span class="t-num">1777314506</span> <span class="t-key">"service"</span>:<span class="t-svc">"notification-service"</span> <span class="t-key">"method"</span>:<span class="t-method">"GET"</span> <span class="t-key">"url"</span>:<span class="t-path">"/health"</span> <span class="t-key">"statusCode"</span>:<span class="t-status">200</span> <span class="t-key">"responseTime"</span>:<span class="t-num">15</span>}</span></div>
+      <div class="log-line"><span class="ln">9</span><span class="lc"><span class="ll-info">{"level":30</span> <span class="t-key">"time"</span>:<span class="t-num">1777314507</span> <span class="t-key">"service"</span>:<span class="t-svc">"notification-service"</span> <span class="t-key">"method"</span>:<span class="t-method">"GET"</span> <span class="t-key">"url"</span>:<span class="t-path">"/metrics"</span> <span class="t-key">"user-agent"</span>:<span class="t-str">"Prometheus/2.54.1"</span> <span class="t-key">"responseTime"</span>:<span class="t-num">3</span>}</span></div>
+      <div class="log-line"><span class="ln">10</span><span class="lc"><span class="ll-info">{"level":30</span> <span class="t-key">"time"</span>:<span class="t-num">1777314507</span> <span class="t-key">"service"</span>:<span class="t-svc">"notification-service"</span> <span class="t-key">"method"</span>:<span class="t-method">"GET"</span> <span class="t-key">"url"</span>:<span class="t-path">"/health"</span> <span class="t-key">"statusCode"</span>:<span class="t-status">200</span> <span class="t-key">"responseTime"</span>:<span class="t-num">1</span>}</span></div>
+    </div>
+  </div>
+
+  <!-- ── 5. ORDER SERVICE ──────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-header">
+      <div class="svc-dot" style="background:#3fb950"></div>
+      <span class="svc-name">order-service</span>
+      <span class="svc-tag tag-spring">Java / Spring Boot</span>
+      <span class="pod-label">order-service-fc9c75699-plrxs</span>
+    </div>
+    <div class="cmd-bar">
+      <span class="prompt">$</span>
+      <span class="cmd">kubectl logs -n seatsavvy deployment/order-service --tail=10</span>
+    </div>
+    <div class="log-body">
+      <div class="log-line"><span class="ln">1</span><span class="lc"><span class="t-time">2026-04-27T18:09:26.418Z</span> <span class="ll-info"> INFO</span> <span class="t-num">1</span> --- [<span class="t-sba">order-service</span>] [<span class="t-sbthread">main</span>] <span class="t-sbclass">o.s.a.r.c.CachingConnectionFactory</span>      : <span class="t-sbmsg">Attempting to connect to: [rabbitmq:5672]</span></span></div>
+      <div class="log-line"><span class="ln">2</span><span class="lc"><span class="t-time">2026-04-27T18:09:26.533Z</span> <span class="ll-info"> INFO</span> <span class="t-num">1</span> --- [<span class="t-sba">order-service</span>] [<span class="t-sbthread">main</span>] <span class="t-sbclass">o.s.a.r.c.CachingConnectionFactory</span>      : <span class="t-sbmsg">Created new connection: rabbitConnectionFactory#25082311:0</span></span></div>
+      <div class="log-line"><span class="ln">3</span><span class="lc"><span class="t-time">2026-04-27T18:09:26.649Z</span> <span class="ll-info"> INFO</span> <span class="t-num">1</span> --- [<span class="t-sba">order-service</span>] [<span class="t-sbthread">main</span>] <span class="t-sbclass">c.t.order.OrderServiceApplication</span>        : <span class="t-hl">Started OrderServiceApplication in 18.409 seconds</span></span></div>
+      <div class="log-line"><span class="ln">4</span><span class="lc"><span class="t-time">2026-04-27T18:10:08.646Z</span> <span class="ll-info"> INFO</span> <span class="t-num">1</span> --- [<span class="t-sba">order-service</span>] [<span class="t-sbthread">nio-8965-exec-1</span>] <span class="t-sbclass">o.a.c.c.C.[Tomcat].[localhost].[/]</span>       : <span class="t-sbmsg">Initializing Spring DispatcherServlet 'dispatcherServlet'</span></span></div>
+      <div class="log-line"><span class="ln">5</span><span class="lc"><span class="t-time">2026-04-27T18:10:08.647Z</span> <span class="ll-info"> INFO</span> <span class="t-num">1</span> --- [<span class="t-sba">order-service</span>] [<span class="t-sbthread">nio-8965-exec-1</span>] <span class="t-sbclass">o.s.web.servlet.DispatcherServlet</span>        : <span class="t-sbmsg">Completed initialization in 5 ms</span></span></div>
+      <div class="log-line"><span class="ln">6</span><span class="lc"><span class="t-time">2026-04-27T18:21:33.722Z</span> <span class="ll-info"> INFO</span> <span class="t-num">1</span> --- [<span class="t-sba">order-service</span>] [<span class="t-sbthread">nio-8965-exec-1</span>] <span class="t-sbclass">c.ticketing.order.service.OrderService</span>   : <span class="t-hl">Order 401 placed — user=1 event=7 seats=1 subtotal=3598.2 tax=179.91 total=3778.11</span></span></div>
+      <div class="log-line"><span class="ln">7</span><span class="lc"><span class="t-time">2026-04-27T18:21:34.537Z</span> <span class="ll-debug">DEBUG</span> <span class="t-num">1</span> --- [<span class="t-sba">order-service</span>] [<span class="t-sbthread">scheduling-1</span>] <span class="t-sbclass">c.t.order.messaging.OrderEventPublisher</span>  : <span class="t-hl">Published outbox event 1001 type=ORDER_PLACED</span></span></div>
+      <div class="log-line"><span class="ln">8</span><span class="lc"><span class="t-time">2026-04-27T18:21:36.613Z</span> <span class="ll-info"> INFO</span> <span class="t-num">1</span> --- [<span class="t-sba">order-service</span>] [<span class="t-sbthread">ntContainer#0-1</span>] <span class="t-sbclass">c.t.o.messaging.PaymentResultListener</span>    : <span class="t-hl">Received payment result for order=401 status=SUCCESS</span></span></div>
+      <div class="log-line"><span class="ln">9</span><span class="lc"><span class="t-time">2026-04-27T18:21:37.566Z</span> <span class="ll-debug">DEBUG</span> <span class="t-num">1</span> --- [<span class="t-sba">order-service</span>] [<span class="t-sbthread">scheduling-1</span>] <span class="t-sbclass">c.t.order.messaging.OrderEventPublisher</span>  : <span class="t-hl">Published outbox event 1002 type=ORDER_CONFIRMED</span></span></div>
+    </div>
+  </div>
+
+  <!-- ── 6. PAYMENT SERVICE ────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-header">
+      <div class="svc-dot" style="background:#3fb950"></div>
+      <span class="svc-name">payment-service</span>
+      <span class="svc-tag tag-spring">Java / Spring Boot</span>
+      <span class="pod-label">payment-service-67b99797d9-bb52g</span>
+    </div>
+    <div class="cmd-bar">
+      <span class="prompt">$</span>
+      <span class="cmd">kubectl logs -n seatsavvy deployment/payment-service --tail=10</span>
+    </div>
+    <div class="log-body">
+      <div class="log-line"><span class="ln">1</span><span class="lc"><span class="t-time">2026-04-27T18:09:25.479Z</span> <span class="ll-info"> INFO</span> <span class="t-num">1</span> --- [<span class="t-sba">payment-service</span>] [<span class="t-sbthread">main</span>] <span class="t-sbclass">o.s.b.w.embedded.tomcat.TomcatWebServer</span> : <span class="t-sbmsg">Tomcat started on port 9865 (http)</span></span></div>
+      <div class="log-line"><span class="ln">2</span><span class="lc"><span class="t-time">2026-04-27T18:09:25.531Z</span> <span class="ll-info"> INFO</span> <span class="t-num">1</span> --- [<span class="t-sba">payment-service</span>] [<span class="t-sbthread">main</span>] <span class="t-sbclass">o.s.a.r.c.CachingConnectionFactory</span>      : <span class="t-sbmsg">Attempting to connect to: [rabbitmq:5672]</span></span></div>
+      <div class="log-line"><span class="ln">3</span><span class="lc"><span class="t-time">2026-04-27T18:09:25.638Z</span> <span class="ll-info"> INFO</span> <span class="t-num">1</span> --- [<span class="t-sba">payment-service</span>] [<span class="t-sbthread">main</span>] <span class="t-sbclass">o.s.a.r.c.CachingConnectionFactory</span>      : <span class="t-sbmsg">Created new connection: rabbitConnectionFactory#2927d781:0</span></span></div>
+      <div class="log-line"><span class="ln">4</span><span class="lc"><span class="t-time">2026-04-27T18:09:25.835Z</span> <span class="ll-info"> INFO</span> <span class="t-num">1</span> --- [<span class="t-sba">payment-service</span>] [<span class="t-sbthread">main</span>] <span class="t-sbclass">c.t.payment.PaymentServiceApplication</span>    : <span class="t-hl">Started PaymentServiceApplication in 17.794 seconds</span></span></div>
+      <div class="log-line"><span class="ln">5</span><span class="lc"><span class="t-time">2026-04-27T18:10:08.867Z</span> <span class="ll-info"> INFO</span> <span class="t-num">1</span> --- [<span class="t-sba">payment-service</span>] [<span class="t-sbthread">nio-9865-exec-1</span>] <span class="t-sbclass">o.a.c.c.C.[Tomcat].[localhost].[/]</span>       : <span class="t-sbmsg">Initializing Spring DispatcherServlet 'dispatcherServlet'</span></span></div>
+      <div class="log-line"><span class="ln">6</span><span class="lc"><span class="t-time">2026-04-27T18:10:08.868Z</span> <span class="ll-info"> INFO</span> <span class="t-num">1</span> --- [<span class="t-sba">payment-service</span>] [<span class="t-sbthread">nio-9865-exec-1</span>] <span class="t-sbclass">o.s.web.servlet.DispatcherServlet</span>        : <span class="t-sbmsg">Completed initialization in 4 ms</span></span></div>
+      <div class="log-line"><span class="ln">7</span><span class="lc"><span class="t-time">2026-04-27T18:21:34.668Z</span> <span class="ll-info"> INFO</span> <span class="t-num">1</span> --- [<span class="t-sba">payment-service</span>] [<span class="t-sbthread">ntContainer#0-1</span>] <span class="t-sbclass">c.t.p.messaging.PaymentRequestListener</span>   : <span class="t-hl">Received payment request for order=401 amount=3778.11</span></span></div>
+      <div class="log-line"><span class="ln">8</span><span class="lc"><span class="t-time">2026-04-27T18:21:34.789Z</span> <span class="ll-info"> INFO</span> <span class="t-num">1</span> --- [<span class="t-sba">payment-service</span>] [<span class="t-sbthread">ntContainer#0-1</span>] <span class="t-sbclass">c.t.payment.service.PaymentService</span>       : <span class="t-hl">Payment PAY1777314094687-1D108C1F for order=401 status=SUCCESS</span></span></div>
+      <div class="log-line"><span class="ln">9</span><span class="lc"><span class="t-time">2026-04-27T18:21:36.598Z</span> <span class="ll-debug">DEBUG</span> <span class="t-num">1</span> --- [<span class="t-sba">payment-service</span>] [<span class="t-sbthread">scheduling-1</span>] <span class="t-sbclass">c.t.p.messaging.PaymentOutboxPublisher</span>   : <span class="t-hl">Published payment outbox event 1</span></span></div>
+    </div>
+  </div>
+
+  <!-- ── 7. FRONTEND ──────────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-header">
+      <div class="svc-dot" style="background:#3fb950"></div>
+      <span class="svc-name">frontend</span>
+      <span class="svc-tag tag-nginx">Nginx / React SPA</span>
+      <span class="pod-label">frontend-5d86864449-tq4qp</span>
+    </div>
+    <div class="cmd-bar">
+      <span class="prompt">$</span>
+      <span class="cmd">kubectl logs -n seatsavvy deployment/frontend --tail=10</span>
+    </div>
+    <div class="log-body">
+      <div class="log-line"><span class="ln">1</span><span class="lc"><span class="t-ip">10.244.0.1</span> - - [<span class="t-time">27/Apr/2026:18:27:37 +0000</span>] <span class="t-method">"GET</span> <span class="t-path">/</span> HTTP/1.1<span class="t-method">"</span> <span class="t-status">200</span> <span class="t-num">712</span> <span class="t-str">"-"</span> <span class="t-str">"kube-probe/1.35"</span> <span class="t-str">"-"</span></span></div>
+      <div class="log-line"><span class="ln">2</span><span class="lc"><span class="t-ip">10.244.0.1</span> - - [<span class="t-time">27/Apr/2026:18:27:43 +0000</span>] <span class="t-method">"GET</span> <span class="t-path">/</span> HTTP/1.1<span class="t-method">"</span> <span class="t-status">200</span> <span class="t-num">712</span> <span class="t-str">"-"</span> <span class="t-str">"kube-probe/1.35"</span> <span class="t-str">"-"</span></span></div>
+      <div class="log-line"><span class="ln">3</span><span class="lc"><span class="t-ip">10.244.0.1</span> - - [<span class="t-time">27/Apr/2026:18:27:47 +0000</span>] <span class="t-method">"GET</span> <span class="t-path">/</span> HTTP/1.1<span class="t-method">"</span> <span class="t-status">200</span> <span class="t-num">712</span> <span class="t-str">"-"</span> <span class="t-str">"kube-probe/1.35"</span> <span class="t-str">"-"</span></span></div>
+      <div class="log-line"><span class="ln">4</span><span class="lc"><span class="t-ip">10.244.0.1</span> - - [<span class="t-time">27/Apr/2026:18:27:57 +0000</span>] <span class="t-method">"GET</span> <span class="t-path">/</span> HTTP/1.1<span class="t-method">"</span> <span class="t-status">200</span> <span class="t-num">712</span> <span class="t-str">"-"</span> <span class="t-str">"kube-probe/1.35"</span> <span class="t-str">"-"</span></span></div>
+      <div class="log-line"><span class="ln">5</span><span class="lc"><span class="t-ip">10.244.0.1</span> - - [<span class="t-time">27/Apr/2026:18:28:03 +0000</span>] <span class="t-method">"GET</span> <span class="t-path">/</span> HTTP/1.1<span class="t-method">"</span> <span class="t-status">200</span> <span class="t-num">712</span> <span class="t-str">"-"</span> <span class="t-str">"kube-probe/1.35"</span> <span class="t-str">"-"</span></span></div>
+      <div class="log-line"><span class="ln">6</span><span class="lc"><span class="t-ip">10.244.0.1</span> - - [<span class="t-time">27/Apr/2026:18:28:07 +0000</span>] <span class="t-method">"GET</span> <span class="t-path">/</span> HTTP/1.1<span class="t-method">"</span> <span class="t-status">200</span> <span class="t-num">712</span> <span class="t-str">"-"</span> <span class="t-str">"kube-probe/1.35"</span> <span class="t-str">"-"</span></span></div>
+      <div class="log-line"><span class="ln">7</span><span class="lc"><span class="t-ip">10.244.0.1</span> - - [<span class="t-time">27/Apr/2026:18:28:17 +0000</span>] <span class="t-method">"GET</span> <span class="t-path">/</span> HTTP/1.1<span class="t-method">"</span> <span class="t-status">200</span> <span class="t-num">712</span> <span class="t-str">"-"</span> <span class="t-str">"kube-probe/1.35"</span> <span class="t-str">"-"</span></span></div>
+      <div class="log-line"><span class="ln">8</span><span class="lc"><span class="t-ip">10.244.0.1</span> - - [<span class="t-time">27/Apr/2026:18:28:23 +0000</span>] <span class="t-method">"GET</span> <span class="t-path">/</span> HTTP/1.1<span class="t-method">"</span> <span class="t-status">200</span> <span class="t-num">712</span> <span class="t-str">"-"</span> <span class="t-str">"kube-probe/1.35"</span> <span class="t-str">"-"</span></span></div>
+      <div class="log-line"><span class="ln">9</span><span class="lc"><span class="t-ip">10.244.0.1</span> - - [<span class="t-time">27/Apr/2026:18:28:27 +0000</span>] <span class="t-method">"GET</span> <span class="t-path">/</span> HTTP/1.1<span class="t-method">"</span> <span class="t-status">200</span> <span class="t-num">712</span> <span class="t-str">"-"</span> <span class="t-str">"kube-probe/1.35"</span> <span class="t-str">"-"</span></span></div>
+      <div class="log-line"><span class="ln">10</span><span class="lc"><span class="t-ip">10.244.0.1</span> - - [<span class="t-time">27/Apr/2026:18:28:37 +0000</span>] <span class="t-method">"GET</span> <span class="t-path">/</span> HTTP/1.1<span class="t-method">"</span> <span class="t-status">200</span> <span class="t-num">712</span> <span class="t-str">"-"</span> <span class="t-str">"kube-probe/1.35"</span> <span class="t-str">"-"</span></span></div>
+    </div>
+  </div>
+
+  <!-- ── 8. RABBITMQ ──────────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-header">
+      <div class="svc-dot" style="background:#e879f9"></div>
+      <span class="svc-name">rabbitmq</span>
+      <span class="svc-tag tag-rabbitmq">RabbitMQ 3.13</span>
+      <span class="pod-label">rabbitmq-5f65f7f8bf-vdl9x</span>
+    </div>
+    <div class="cmd-bar">
+      <span class="prompt">$</span>
+      <span class="cmd">kubectl logs -n seatsavvy deployment/rabbitmq --tail=10</span>
+    </div>
+    <div class="log-body">
+      <div class="log-line"><span class="ln">1</span><span class="lc"><span class="t-time">2026-04-27 18:10:11.768</span> <span class="ll-info">[info]</span> <span class="t-rmq">&lt;0.1834.0&gt;</span> closing AMQP connection <span class="t-amqp">&lt;0.1834.0&gt;</span> (<span class="t-ip">10.244.0.14:53836 -&gt; 10.244.0.3:5672</span> - <span class="t-str">rabbitConnectionFactory#162bc9e8:0</span>, vhost: <span class="t-str">'/'</span>, user: <span class="t-str">'guest'</span>)</span></div>
+      <div class="log-line"><span class="ln">2</span><span class="lc"><span class="t-time">2026-04-27 18:10:12.056</span> <span class="ll-info">[info]</span> <span class="t-rmq">&lt;0.1739.0&gt;</span> closing AMQP connection <span class="t-amqp">&lt;0.1739.0&gt;</span> (<span class="t-ip">10.244.0.13:43626 -&gt; 10.244.0.3:5672</span> - <span class="t-str">rabbitConnectionFactory#25082311:0</span>, vhost: <span class="t-str">'/'</span>)</span></div>
+      <div class="log-line"><span class="ln">3</span><span class="lc"><span class="t-time">2026-04-27 18:14:42.764</span> <span class="ll-warn">[warning]</span> <span class="t-rmq">&lt;0.940.0&gt;</span> <span class="t-rmq-warn">closing AMQP connection</span> <span class="t-amqp">&lt;0.940.0&gt;</span> (<span class="t-ip">10.244.0.15:52748 -&gt; 10.244.0.3:5672</span>, vhost: <span class="t-str">'/'</span>, user: <span class="t-str">'guest'</span>)</span></div>
+      <div class="log-line"><span class="ln">4</span><span class="lc"><span class="t-time">2026-04-27 18:14:42.764</span> <span class="ll-warn">[warning]</span> <span class="t-rmq">&lt;0.940.0&gt;</span> <span class="t-rmq-warn">client unexpectedly closed TCP connection</span></span></div>
+      <div class="log-line"><span class="ln">5</span><span class="lc"><span class="t-time">2026-04-27 18:14:44.571</span> <span class="ll-info">[info]</span> <span class="t-rmq">&lt;0.2430.0&gt;</span> accepting AMQP connection <span class="t-amqp">&lt;0.2430.0&gt;</span> (<span class="t-ip">10.244.0.15:35292 -&gt; 10.244.0.3:5672</span>)</span></div>
+      <div class="log-line"><span class="ln">6</span><span class="lc"><span class="t-time">2026-04-27 18:14:44.693</span> <span class="ll-info">[info]</span> <span class="t-rmq">&lt;0.2430.0&gt;</span> connection <span class="t-amqp">&lt;0.2430.0&gt;</span> (<span class="t-ip">10.244.0.15:35292 -&gt; 10.244.0.3:5672</span>): user <span class="t-hl">'guest' authenticated and granted access to vhost '/'</span></span></div>
+      <div class="log-line"><span class="ln">7</span><span class="lc"><span class="t-time">2026-04-27 18:16:47.620</span> <span class="ll-info">[info]</span> <span class="t-rmq">&lt;0.2654.0&gt;</span> accepting AMQP connection <span class="t-amqp">&lt;0.2654.0&gt;</span> (<span class="t-ip">10.244.0.24:41934 -&gt; 10.244.0.3:5672</span>)</span></div>
+      <div class="log-line"><span class="ln">8</span><span class="lc"><span class="t-time">2026-04-27 18:16:47.668</span> <span class="ll-info">[info]</span> <span class="t-rmq">&lt;0.2654.0&gt;</span> connection <span class="t-amqp">&lt;0.2654.0&gt;</span> (<span class="t-ip">10.244.0.24:41934 -&gt; 10.244.0.3:5672</span>): user <span class="t-hl">'guest' authenticated and granted access to vhost '/'</span></span></div>
+      <div class="log-line"><span class="ln">9</span><span class="lc"><span class="t-time">2026-04-27 18:17:38.257</span> <span class="ll-warn">[warning]</span> <span class="t-rmq">&lt;0.2430.0&gt;</span> <span class="t-rmq-warn">closing AMQP connection</span> <span class="t-amqp">&lt;0.2430.0&gt;</span> (<span class="t-ip">10.244.0.15:35292 -&gt; 10.244.0.3:5672</span>, vhost: <span class="t-str">'/'</span>)</span></div>
+      <div class="log-line"><span class="ln">10</span><span class="lc"><span class="t-time">2026-04-27 18:17:38.257</span> <span class="ll-warn">[warning]</span> <span class="t-rmq">&lt;0.2430.0&gt;</span> <span class="t-rmq-warn">client unexpectedly closed TCP connection</span></span></div>
+    </div>
+  </div>
+
+</div><!-- /grid -->
+
+<!-- ── FOOTER ─────────────────────────────────────────────────────────────── -->
+<div class="footer">
+  <span>SeatSavvy &nbsp;·&nbsp; Namespace: seatsavvy &nbsp;·&nbsp; kubectl v1.35 &nbsp;·&nbsp; Minikube v1.35.0</span>
+  <span>All 16 pods Running &nbsp;·&nbsp; 0 Restarts &nbsp;·&nbsp; Captured 27 Apr 2026</span>
+</div>
+
+</body>
+</html>

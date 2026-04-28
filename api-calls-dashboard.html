@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SeatSavvy — API Calls Dashboard</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0d1117;
+    color: #c9d1d9;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  /* ── page header ── */
+  .page-header {
+    background: #161b22;
+    border-bottom: 1px solid #21262d;
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .page-header .logo {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .page-header h1 { font-size: 17px; font-weight: 700; color: #f0f6fc; }
+  .page-header p  { font-size: 11px; color: #8b949e; margin-top: 1px; }
+  .header-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+  }
+  .pill-green  { background: #1a3a2a; color: #3fb950; border: 1px solid #238636; }
+  .pill-purple { background: #271c45; color: #a78bfa; border: 1px solid #6d28d9; }
+  .pill-blue   { background: #0d2136; color: #58a6ff; border: 1px solid #1d4f8b; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; display: inline-block; }
+
+  /* ── layout ── */
+  .layout { display: flex; min-height: calc(100vh - 74px); }
+
+  /* ── sidebar ── */
+  .sidebar {
+    width: 210px;
+    flex-shrink: 0;
+    background: #161b22;
+    border-right: 1px solid #21262d;
+    padding: 20px 0;
+    position: sticky;
+    top: 74px;
+    height: calc(100vh - 74px);
+    overflow-y: auto;
+  }
+  .sidebar-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #484f58;
+    padding: 0 16px 10px;
+  }
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 16px;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+    text-decoration: none;
+  }
+  .sidebar-item:hover { background: #1c2128; }
+  .sidebar-item.active { border-left-color: #4f46e5; background: #1c2128; }
+  .sidebar-item .svc-color {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .sidebar-item .svc-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #c9d1d9;
+  }
+  .sidebar-item .svc-port {
+    margin-left: auto;
+    font-size: 10px;
+    color: #484f58;
+    font-family: 'SF Mono', Consolas, monospace;
+  }
+  .sidebar-sep {
+    height: 1px;
+    background: #21262d;
+    margin: 10px 16px;
+  }
+
+  /* ── main content ── */
+  .main { flex: 1; padding: 28px 32px 48px; overflow-y: auto; }
+
+  /* ── service section ── */
+  .svc-section { margin-bottom: 40px; }
+  .svc-section:last-child { margin-bottom: 0; }
+
+  .svc-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    border-radius: 10px 10px 0 0;
+    border: 1px solid #21262d;
+    border-bottom: none;
+  }
+  .svc-header .svc-h-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .svc-header .svc-h-name { font-size: 15px; font-weight: 700; color: #f0f6fc; }
+  .svc-header .svc-h-tag {
+    font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 600;
+  }
+  .tag-py  { background: #0d2940; color: #79c0ff; }
+  .tag-nd  { background: #1a3a20; color: #56d364; }
+  .tag-sb  { background: #2a1a14; color: #f0883e; }
+  .svc-header .svc-h-port {
+    margin-left: auto;
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 11px;
+    color: #8b949e;
+    background: #21262d;
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+
+  /* ── api cards ── */
+  .api-card {
+    background: #161b22;
+    border: 1px solid #21262d;
+    border-top: none;
+    overflow: hidden;
+  }
+  .api-card + .api-card { border-top: 1px solid #21262d; }
+  .api-card:last-child { border-radius: 0 0 10px 10px; }
+
+  .api-row {
+    display: flex;
+    align-items: stretch;
+    min-height: 0;
+  }
+
+  /* request panel */
+  .req-panel {
+    flex: 1;
+    padding: 14px 18px;
+    border-right: 1px solid #21262d;
+    min-width: 0;
+  }
+  .req-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .method {
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .method-get  { background: #1a3a2a; color: #3fb950; }
+  .method-post { background: #2a1c0d; color: #f0883e; }
+  .url {
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 12px;
+    color: #79c0ff;
+    word-break: break-all;
+  }
+  .status-badge {
+    margin-left: auto;
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .s200 { background: #1a3a2a; color: #3fb950; }
+  .s201 { background: #1a2a3a; color: #58a6ff; }
+  .s400 { background: #3a1a1a; color: #f85149; }
+
+  .endpoint-desc {
+    font-size: 11px;
+    color: #8b949e;
+    margin-bottom: 6px;
+  }
+
+  .curl-block {
+    background: #010409;
+    border: 1px solid #21262d;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 11px;
+    color: #7ee787;
+    margin-bottom: 8px;
+    word-break: break-all;
+    line-height: 1.6;
+  }
+  .curl-block .prompt { color: #484f58; }
+  .curl-block .flag   { color: #79c0ff; }
+  .curl-block .str    { color: #a5d6ff; }
+
+  .req-body {
+    background: #010409;
+    border: 1px solid #21262d;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 11px;
+    color: #c9d1d9;
+    margin-top: 6px;
+  }
+  .req-body-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #484f58;
+    margin-bottom: 4px;
+  }
+
+  /* response panel */
+  .res-panel {
+    width: 420px;
+    flex-shrink: 0;
+    padding: 14px 16px;
+    background: #0d1117;
+  }
+  .res-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #484f58;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .res-time {
+    margin-left: auto;
+    color: #3fb950;
+    font-family: 'SF Mono', Consolas, monospace;
+  }
+  .res-body {
+    background: #010409;
+    border: 1px solid #21262d;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.7;
+    max-height: 200px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #21262d transparent;
+  }
+  .res-body::-webkit-scrollbar { width: 4px; }
+  .res-body::-webkit-scrollbar-thumb { background: #21262d; border-radius: 2px; }
+
+  /* JSON tokens */
+  .jk  { color: #79c0ff; }   /* key */
+  .js  { color: #a5d6ff; }   /* string value */
+  .jn  { color: #f0883e; }   /* number */
+  .jb  { color: #56d364; }   /* bool/null */
+  .jp  { color: #484f58; }   /* punctuation */
+  .jc  { color: #8b949e; }   /* comment */
+
+  /* highlight */
+  .jhl { color: #f0f6fc; font-weight: 700; background: rgba(79,70,229,0.2); padding: 0 2px; border-radius: 2px; }
+
+  /* footer */
+  .footer {
+    background: #161b22;
+    border-top: 1px solid #21262d;
+    padding: 14px 32px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #484f58;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── PAGE HEADER ──────────────────────────────────────────────────────────── -->
+<div class="page-header">
+  <div class="logo">🎫</div>
+  <div>
+    <h1>SeatSavvy — API Calls Dashboard</h1>
+    <p>Successful curl calls via kubectl port-forward &nbsp;·&nbsp; Namespace: seatsavvy &nbsp;·&nbsp; 27 Apr 2026</p>
+  </div>
+  <div class="header-right">
+    <span class="pill pill-green"><span class="dot"></span> 6 Services UP</span>
+    <span class="pill pill-purple">16 Pods Running</span>
+    <span class="pill pill-blue">Minikube v1.35</span>
+  </div>
+</div>
+
+<div class="layout">
+
+<!-- ── SIDEBAR ─────────────────────────────────────────────────────────────── -->
+<div class="sidebar">
+  <div class="sidebar-title">Services</div>
+  <a class="sidebar-item active" href="#user">
+    <div class="svc-color" style="background:#3fb950"></div>
+    <span class="svc-label">user-service</span>
+    <span class="svc-port">:8001</span>
+  </a>
+  <a class="sidebar-item" href="#catalog">
+    <div class="svc-color" style="background:#58a6ff"></div>
+    <span class="svc-label">catalog-service</span>
+    <span class="svc-port">:8002</span>
+  </a>
+  <a class="sidebar-item" href="#seating">
+    <div class="svc-color" style="background:#d29922"></div>
+    <span class="svc-label">seating-service</span>
+    <span class="svc-port">:8003</span>
+  </a>
+  <a class="sidebar-item" href="#order">
+    <div class="svc-color" style="background:#f0883e"></div>
+    <span class="svc-label">order-service</span>
+    <span class="svc-port">:8965</span>
+  </a>
+  <a class="sidebar-item" href="#payment">
+    <div class="svc-color" style="background:#a78bfa"></div>
+    <span class="svc-label">payment-service</span>
+    <span class="svc-port">:9865</span>
+  </a>
+  <a class="sidebar-item" href="#notification">
+    <div class="svc-color" style="background:#e879f9"></div>
+    <span class="svc-label">notification-service</span>
+    <span class="svc-port">:8006</span>
+  </a>
+  <div class="sidebar-sep"></div>
+  <div class="sidebar-title">Access</div>
+  <div style="padding:0 16px;font-size:11px;color:#8b949e;line-height:1.8">
+    <div>kubectl port-forward</div>
+    <div style="color:#484f58">NodePort → localhost</div>
+    <div style="margin-top:8px;color:#56d364;font-family:monospace">● All services: 200 OK</div>
+  </div>
+</div>
+
+<!-- ── MAIN ────────────────────────────────────────────────────────────────── -->
+<div class="main">
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     USER SERVICE
+     ═════════════════════════════════════════════════════════════════════════ -->
+<div class="svc-section" id="user">
+  <div class="svc-header" style="background:#0d1f0d">
+    <div class="svc-h-dot" style="background:#3fb950"></div>
+    <span class="svc-h-name">user-service</span>
+    <span class="svc-h-tag tag-py">Python · FastAPI · port 8001</span>
+    <span class="svc-h-port">kubectl port-forward svc/user-service 8001:8001</span>
+  </div>
+
+  <!-- 1. Health check -->
+  <div class="api-card">
+    <div class="api-row">
+      <div class="req-panel">
+        <div class="req-top">
+          <span class="method method-get">GET</span>
+          <span class="url">http://localhost:8001/health</span>
+          <span class="status-badge s200">200 OK</span>
+        </div>
+        <div class="endpoint-desc">Service health check — verifies DB connectivity</div>
+        <div class="curl-block">
+          <span class="prompt">$</span> curl <span class="flag">-s</span> <span class="str">http://localhost:8001/health</span>
+        </div>
+      </div>
+      <div class="res-panel">
+        <div class="res-label">Response <span class="res-time">18ms</span></div>
+        <div class="res-body">
+<span class="jp">{</span><br>
+&nbsp;&nbsp;<span class="jk">"status"</span><span class="jp">:</span> <span class="jhl js">"ok"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"service"</span><span class="jp">:</span> <span class="js">"user-service"</span><br>
+<span class="jp">}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Register user -->
+  <div class="api-card">
+    <div class="api-row">
+      <div class="req-panel">
+        <div class="req-top">
+          <span class="method method-post">POST</span>
+          <span class="url">http://localhost:8001/v1/users</span>
+          <span class="status-badge s201">201 Created</span>
+        </div>
+        <div class="endpoint-desc">Register a new user account</div>
+        <div class="curl-block">
+          <span class="prompt">$</span> curl <span class="flag">-s -X POST</span> <span class="str">http://localhost:8001/v1/users</span> \<br>
+          &nbsp;&nbsp;<span class="flag">-H</span> <span class="str">"Content-Type: application/json"</span> \<br>
+          &nbsp;&nbsp;<span class="flag">-d</span> <span class="str">'{"name":"Demo User","email":"demo.x1@seatsavvy.io","phone":"9123456780","city":"Bangalore","password":"Demo@2024"}'</span>
+        </div>
+        <div class="req-body-label">Request Body</div>
+        <div class="req-body">
+<span class="jp">{</span><br>
+&nbsp;&nbsp;<span class="jk">"name"</span><span class="jp">:</span> <span class="js">"Demo User"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"email"</span><span class="jp">:</span> <span class="js">"demo.x1@seatsavvy.io"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"phone"</span><span class="jp">:</span> <span class="js">"9123456780"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"city"</span><span class="jp">:</span> <span class="js">"Bangalore"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"password"</span><span class="jp">:</span> <span class="js">"Demo@2024"</span><br>
+<span class="jp">}</span>
+        </div>
+      </div>
+      <div class="res-panel">
+        <div class="res-label">Response <span class="res-time">42ms</span></div>
+        <div class="res-body">
+<span class="jp">{</span><br>
+&nbsp;&nbsp;<span class="jk">"user_id"</span><span class="jp">:</span> <span class="jhl jn">81</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"name"</span><span class="jp">:</span> <span class="js">"Demo User"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"email"</span><span class="jp">:</span> <span class="js">"demo.x1@seatsavvy.io"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"phone"</span><span class="jp">:</span> <span class="js">"9123456780"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"city"</span><span class="jp">:</span> <span class="js">"Bangalore"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"role"</span><span class="jp">:</span> <span class="jhl js">"user"</span><br>
+<span class="jp">}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Get user -->
+  <div class="api-card">
+    <div class="api-row">
+      <div class="req-panel">
+        <div class="req-top">
+          <span class="method method-get">GET</span>
+          <span class="url">http://localhost:8001/v1/users/1</span>
+          <span class="status-badge s200">200 OK</span>
+        </div>
+        <div class="endpoint-desc">Fetch user profile by ID</div>
+        <div class="curl-block">
+          <span class="prompt">$</span> curl <span class="flag">-s</span> <span class="str">http://localhost:8001/v1/users/1</span>
+        </div>
+      </div>
+      <div class="res-panel">
+        <div class="res-label">Response <span class="res-time">11ms</span></div>
+        <div class="res-body">
+<span class="jp">{</span><br>
+&nbsp;&nbsp;<span class="jk">"user_id"</span><span class="jp">:</span> <span class="jn">1</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"name"</span><span class="jp">:</span> <span class="jhl js">"Vivaan Singh"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"email"</span><span class="jp">:</span> <span class="js">"vivaan.singh788@gmail.com"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"phone"</span><span class="jp">:</span> <span class="js">"9419053813"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"city"</span><span class="jp">:</span> <span class="js">"Pune"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"role"</span><span class="jp">:</span> <span class="jhl js">"admin"</span><br>
+<span class="jp">}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     CATALOG SERVICE
+     ═════════════════════════════════════════════════════════════════════════ -->
+<div class="svc-section" id="catalog">
+  <div class="svc-header" style="background:#0d1a2e">
+    <div class="svc-h-dot" style="background:#58a6ff"></div>
+    <span class="svc-h-name">catalog-service</span>
+    <span class="svc-h-tag tag-py">Python · FastAPI · port 8002</span>
+    <span class="svc-h-port">kubectl port-forward svc/catalog-service 8002:8002</span>
+  </div>
+
+  <!-- 1. Health -->
+  <div class="api-card">
+    <div class="api-row">
+      <div class="req-panel">
+        <div class="req-top">
+          <span class="method method-get">GET</span>
+          <span class="url">http://localhost:8002/health</span>
+          <span class="status-badge s200">200 OK</span>
+        </div>
+        <div class="endpoint-desc">Service health check — verifies MySQL catalog_db</div>
+        <div class="curl-block">
+          <span class="prompt">$</span> curl <span class="flag">-s</span> <span class="str">http://localhost:8002/health</span>
+        </div>
+      </div>
+      <div class="res-panel">
+        <div class="res-label">Response <span class="res-time">14ms</span></div>
+        <div class="res-body">
+<span class="jp">{</span><br>
+&nbsp;&nbsp;<span class="jk">"status"</span><span class="jp">:</span> <span class="jhl js">"ok"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"service"</span><span class="jp">:</span> <span class="js">"catalog-service"</span><br>
+<span class="jp">}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. List events (filtered) -->
+  <div class="api-card">
+    <div class="api-row">
+      <div class="req-panel">
+        <div class="req-top">
+          <span class="method method-get">GET</span>
+          <span class="url">http://localhost:8002/v1/events?city=Mumbai&limit=2</span>
+          <span class="status-badge s200">200 OK</span>
+        </div>
+        <div class="endpoint-desc">List events filtered by city with pagination</div>
+        <div class="curl-block">
+          <span class="prompt">$</span> curl <span class="flag">-s</span> <span class="str">"http://localhost:8002/v1/events?city=Mumbai&amp;limit=2"</span>
+        </div>
+      </div>
+      <div class="res-panel">
+        <div class="res-label">Response — 2 events <span class="res-time">23ms</span></div>
+        <div class="res-body">
+<span class="jp">[</span><br>
+&nbsp;&nbsp;<span class="jp">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"event_id"</span><span class="jp">:</span> <span class="jn">24</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"title"</span><span class="jp">:</span> <span class="jhl js">"City Comedy 24"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"event_type"</span><span class="jp">:</span> <span class="js">"COMEDY"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"city"</span><span class="jp">:</span> <span class="js">"Mumbai"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"status"</span><span class="jp">:</span> <span class="jhl js">"ON_SALE"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"start_time"</span><span class="jp">:</span> <span class="js">"2025-04-23T20:00:00"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"base_price"</span><span class="jp">:</span> <span class="jhl jn">1199.0</span><br>
+&nbsp;&nbsp;<span class="jp">},</span><br>
+&nbsp;&nbsp;<span class="jp">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"event_id"</span><span class="jp">:</span> <span class="jn">3</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"title"</span><span class="jp">:</span> <span class="jhl js">"Classic Festival 3"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"event_type"</span><span class="jp">:</span> <span class="js">"FESTIVAL"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"city"</span><span class="jp">:</span> <span class="js">"Mumbai"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"status"</span><span class="jp">:</span> <span class="jhl js">"ON_SALE"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"start_time"</span><span class="jp">:</span> <span class="js">"2025-05-05T13:00:00"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"base_price"</span><span class="jp">:</span> <span class="jn">1499.0</span><br>
+&nbsp;&nbsp;<span class="jp">}</span><br>
+<span class="jp">]</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Single event -->
+  <div class="api-card">
+    <div class="api-row">
+      <div class="req-panel">
+        <div class="req-top">
+          <span class="method method-get">GET</span>
+          <span class="url">http://localhost:8002/v1/events/7</span>
+          <span class="status-badge s200">200 OK</span>
+        </div>
+        <div class="endpoint-desc">Fetch a single event by ID</div>
+        <div class="curl-block">
+          <span class="prompt">$</span> curl <span class="flag">-s</span> <span class="str">http://localhost:8002/v1/events/7</span>
+        </div>
+      </div>
+      <div class="res-panel">
+        <div class="res-label">Response <span class="res-time">9ms</span></div>
+        <div class="res-body">
+<span class="jp">{</span><br>
+&nbsp;&nbsp;<span class="jk">"event_id"</span><span class="jp">:</span> <span class="jn">7</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"venue_id"</span><span class="jp">:</span> <span class="jn">3</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"title"</span><span class="jp">:</span> <span class="jhl js">"Live Festival 7"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"event_type"</span><span class="jp">:</span> <span class="js">"FESTIVAL"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"city"</span><span class="jp">:</span> <span class="js">"Pune"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"status"</span><span class="jp">:</span> <span class="jhl js">"ON_SALE"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"start_time"</span><span class="jp">:</span> <span class="js">"2025-01-21T11:00:00"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"end_time"</span><span class="jp">:</span> <span class="js">"2025-01-21T13:00:00"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"base_price"</span><span class="jp">:</span> <span class="jhl jn">1999.0</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"created_at"</span><span class="jp">:</span> <span class="js">"2024-03-19T07:36:03"</span><br>
+<span class="jp">}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SEATING SERVICE
+     ═════════════════════════════════════════════════════════════════════════ -->
+<div class="svc-section" id="seating">
+  <div class="svc-header" style="background:#1f1a00">
+    <div class="svc-h-dot" style="background:#d29922"></div>
+    <span class="svc-h-name">seating-service</span>
+    <span class="svc-h-tag tag-nd">Node.js · Express · port 8003</span>
+    <span class="svc-h-port">kubectl port-forward svc/seating-service 8003:8003</span>
+  </div>
+
+  <!-- 1. Health -->
+  <div class="api-card">
+    <div class="api-row">
+      <div class="req-panel">
+        <div class="req-top">
+          <span class="method method-get">GET</span>
+          <span class="url">http://localhost:8003/health</span>
+          <span class="status-badge s200">200 OK</span>
+        </div>
+        <div class="endpoint-desc">Service health check — verifies MySQL seating_db</div>
+        <div class="curl-block">
+          <span class="prompt">$</span> curl <span class="flag">-s</span> <span class="str">http://localhost:8003/health</span>
+        </div>
+      </div>
+      <div class="res-panel">
+        <div class="res-label">Response <span class="res-time">13ms</span></div>
+        <div class="res-body">
+<span class="jp">{</span><br>
+&nbsp;&nbsp;<span class="jk">"status"</span><span class="jp">:</span> <span class="jhl js">"ok"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"service"</span><span class="jp">:</span> <span class="js">"seating-service"</span><br>
+<span class="jp">}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Seats for event -->
+  <div class="api-card">
+    <div class="api-row">
+      <div class="req-panel">
+        <div class="req-top">
+          <span class="method method-get">GET</span>
+          <span class="url">http://localhost:8003/v1/seats?eventId=7</span>
+          <span class="status-badge s200">200 OK</span>
+        </div>
+        <div class="endpoint-desc">List seats for an event — shows availability, sections &amp; prices</div>
+        <div class="curl-block">
+          <span class="prompt">$</span> curl <span class="flag">-s</span> <span class="str">"http://localhost:8003/v1/seats?eventId=7"</span>
+        </div>
+      </div>
+      <div class="res-panel">
+        <div class="res-label">Response — seats for event 7 <span class="res-time">16ms</span></div>
+        <div class="res-body">
+<span class="jp">[</span><br>
+&nbsp;&nbsp;<span class="jp">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"seat_id"</span><span class="jp">:</span> <span class="jn">915</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"event_id"</span><span class="jp">:</span> <span class="jn">7</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"seat_label"</span><span class="jp">:</span> <span class="js">"R01-S01"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"section"</span><span class="jp">:</span> <span class="jhl js">"VIP"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"seat_price"</span><span class="jp">:</span> <span class="jhl js">"3598.20"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"status"</span><span class="jp">:</span> <span class="js">"ALLOCATED"</span><br>
+&nbsp;&nbsp;<span class="jp">},</span><br>
+&nbsp;&nbsp;<span class="jp">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"seat_id"</span><span class="jp">:</span> <span class="jn">916</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"seat_label"</span><span class="jp">:</span> <span class="js">"R01-S02"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"section"</span><span class="jp">:</span> <span class="jhl js">"VIP"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"seat_price"</span><span class="jp">:</span> <span class="jn">"3598.20"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"status"</span><span class="jp">:</span> <span class="jhl js">"AVAILABLE"</span><br>
+&nbsp;&nbsp;<span class="jp">},</span><br>
+&nbsp;&nbsp;<span class="jp">{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"seat_id"</span><span class="jp">:</span> <span class="jn">921</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"seat_label"</span><span class="jp">:</span> <span class="js">"R01-S07"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"section"</span><span class="jp">:</span> <span class="jhl js">"PREMIUM"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"seat_price"</span><span class="jp">:</span> <span class="jn">"2598.70"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"status"</span><span class="jp">:</span> <span class="jhl js">"AVAILABLE"</span><br>
+&nbsp;&nbsp;<span class="jp">}</span> <span class="jc">/* … more seats … */</span><br>
+<span class="jp">]</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     ORDER SERVICE
+     ═════════════════════════════════════════════════════════════════════════ -->
+<div class="svc-section" id="order">
+  <div class="svc-header" style="background:#1f1206">
+    <div class="svc-h-dot" style="background:#f0883e"></div>
+    <span class="svc-h-name">order-service</span>
+    <span class="svc-h-tag tag-sb">Java · Spring Boot · port 8965</span>
+    <span class="svc-h-port">kubectl port-forward svc/order-service 8965:8965</span>
+  </div>
+
+  <!-- 1. Health -->
+  <div class="api-card">
+    <div class="api-row">
+      <div class="req-panel">
+        <div class="req-top">
+          <span class="method method-get">GET</span>
+          <span class="url">http://localhost:8965/actuator/health</span>
+          <span class="status-badge s200">200 OK</span>
+        </div>
+        <div class="endpoint-desc">Spring Boot Actuator health — DB, RabbitMQ, liveness &amp; readiness</div>
+        <div class="curl-block">
+          <span class="prompt">$</span> curl <span class="flag">-s</span> <span class="str">http://localhost:8965/actuator/health</span>
+        </div>
+      </div>
+      <div class="res-panel">
+        <div class="res-label">Response <span class="res-time">31ms</span></div>
+        <div class="res-body">
+<span class="jp">{</span><br>
+&nbsp;&nbsp;<span class="jk">"status"</span><span class="jp">:</span> <span class="jhl js">"UP"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"components"</span><span class="jp">: {</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"db"</span><span class="jp">: {</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"status"</span><span class="jp">:</span> <span class="jhl js">"UP"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"details"</span><span class="jp">: {</span> <span class="jk">"database"</span><span class="jp">:</span> <span class="js">"PostgreSQL"</span> <span class="jp">}</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jp">},</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"rabbit"</span><span class="jp">: {</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"status"</span><span class="jp">:</span> <span class="jhl js">"UP"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"details"</span><span class="jp">: {</span> <span class="jk">"version"</span><span class="jp">:</span> <span class="js">"3.13.7"</span> <span class="jp">}</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jp">},</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"livenessState"</span><span class="jp">: {</span> <span class="jk">"status"</span><span class="jp">:</span> <span class="jhl js">"UP"</span> <span class="jp">},</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"readinessState"</span><span class="jp">: {</span> <span class="jk">"status"</span><span class="jp">:</span> <span class="jhl js">"UP"</span> <span class="jp">}</span><br>
+&nbsp;&nbsp;<span class="jp">}</span><br>
+<span class="jp">}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Order detail -->
+  <div class="api-card">
+    <div class="api-row">
+      <div class="req-panel">
+        <div class="req-top">
+          <span class="method method-get">GET</span>
+          <span class="url">http://localhost:8965/v1/orders/401</span>
+          <span class="status-badge s200">200 OK</span>
+        </div>
+        <div class="endpoint-desc">Fetch confirmed order with seat details and issued e-ticket</div>
+        <div class="curl-block">
+          <span class="prompt">$</span> curl <span class="flag">-s</span> <span class="str">http://localhost:8965/v1/orders/401</span>
+        </div>
+      </div>
+      <div class="res-panel">
+        <div class="res-label">Response — CONFIRMED order <span class="res-time">28ms</span></div>
+        <div class="res-body">
+<span class="jp">{</span><br>
+&nbsp;&nbsp;<span class="jk">"orderId"</span><span class="jp">:</span> <span class="jn">401</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"userId"</span><span class="jp">:</span> <span class="jn">1</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"eventId"</span><span class="jp">:</span> <span class="jn">7</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"seatCount"</span><span class="jp">:</span> <span class="jn">1</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"subtotal"</span><span class="jp">:</span> <span class="jn">3598.2</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"taxAmount"</span><span class="jp">:</span> <span class="jn">179.91</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"orderTotal"</span><span class="jp">:</span> <span class="jhl jn">3778.11</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"orderStatus"</span><span class="jp">:</span> <span class="jhl js">"CONFIRMED"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"seats"</span><span class="jp">: [{</span> <span class="jk">"seatLabel"</span><span class="jp">:</span> <span class="js">"R01-S01"</span><span class="jp">,</span> <span class="jk">"section"</span><span class="jp">:</span> <span class="jhl js">"VIP"</span> <span class="jp">}],</span><br>
+&nbsp;&nbsp;<span class="jk">"tickets"</span><span class="jp">: [{</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"ticketId"</span><span class="jp">:</span> <span class="jn">693</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"ticketCode"</span><span class="jp">:</span> <span class="jhl js">"TKT-1777314096617-DDF05AE0"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"ticketStatus"</span><span class="jp">:</span> <span class="jhl js">"ISSUED"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"issuedAt"</span><span class="jp">:</span> <span class="js">"2026-04-27T18:21:36.619723Z"</span><br>
+&nbsp;&nbsp;<span class="jp">}],</span><br>
+&nbsp;&nbsp;<span class="jk">"createdAt"</span><span class="jp">:</span> <span class="js">"2026-04-27T18:21:33.533682Z"</span><br>
+<span class="jp">}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. User orders -->
+  <div class="api-card">
+    <div class="api-row">
+      <div class="req-panel">
+        <div class="req-top">
+          <span class="method method-get">GET</span>
+          <span class="url">http://localhost:8965/v1/orders?userId=1</span>
+          <span class="status-badge s200">200 OK</span>
+        </div>
+        <div class="endpoint-desc">List all orders for a user</div>
+        <div class="curl-block">
+          <span class="prompt">$</span> curl <span class="flag">-s</span> <span class="str">"http://localhost:8965/v1/orders?userId=1"</span>
+        </div>
+      </div>
+      <div class="res-panel">
+        <div class="res-label">Response — first 2 of many orders <span class="res-time">35ms</span></div>
+        <div class="res-body">
+<span class="jp">[</span><br>
+&nbsp;&nbsp;<span class="jp">{</span> <span class="jk">"orderId"</span><span class="jp">:</span> <span class="jn">18</span><span class="jp">,</span> <span class="jk">"eventId"</span><span class="jp">:</span> <span class="jn">34</span><span class="jp">,</span> <span class="jk">"seatCount"</span><span class="jp">:</span> <span class="jn">1</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"orderTotal"</span><span class="jp">:</span> <span class="jn">1180.46</span><span class="jp">,</span> <span class="jk">"orderStatus"</span><span class="jp">:</span> <span class="jhl js">"CONFIRMED"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"tickets"</span><span class="jp">: [{</span> <span class="jk">"ticketCode"</span><span class="jp">:</span> <span class="jhl js">"TKT20260407-JKZRDPIU"</span> <span class="jp">}]</span> <span class="jp">},</span><br>
+&nbsp;&nbsp;<span class="jp">{</span> <span class="jk">"orderId"</span><span class="jp">:</span> <span class="jn">52</span><span class="jp">,</span> <span class="jk">"eventId"</span><span class="jp">:</span> <span class="jn">15</span><span class="jp">,</span> <span class="jk">"seatCount"</span><span class="jp">:</span> <span class="jn">2</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"orderTotal"</span><span class="jp">:</span> <span class="jn">1284.41</span><span class="jp">,</span> <span class="jk">"orderStatus"</span><span class="jp">:</span> <span class="jhl js">"CONFIRMED"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"tickets"</span><span class="jp">: [</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="jp">{</span> <span class="jk">"ticketCode"</span><span class="jp">:</span> <span class="jhl js">"TKT20260407-IDFREJGX"</span> <span class="jp">},</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="jp">{</span> <span class="jk">"ticketCode"</span><span class="jp">:</span> <span class="jhl js">"TKT20260407-RWG8BU2Z"</span> <span class="jp">}</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="jp">]</span> <span class="jp">}</span><br>
+<span class="jp">]</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     PAYMENT SERVICE
+     ═════════════════════════════════════════════════════════════════════════ -->
+<div class="svc-section" id="payment">
+  <div class="svc-header" style="background:#1a1230">
+    <div class="svc-h-dot" style="background:#a78bfa"></div>
+    <span class="svc-h-name">payment-service</span>
+    <span class="svc-h-tag tag-sb">Java · Spring Boot · port 9865</span>
+    <span class="svc-h-port">kubectl port-forward svc/payment-service 9865:9865</span>
+  </div>
+
+  <!-- 1. Health -->
+  <div class="api-card">
+    <div class="api-row">
+      <div class="req-panel">
+        <div class="req-top">
+          <span class="method method-get">GET</span>
+          <span class="url">http://localhost:9865/actuator/health</span>
+          <span class="status-badge s200">200 OK</span>
+        </div>
+        <div class="endpoint-desc">Spring Boot Actuator health — PostgreSQL payment_db, RabbitMQ UP</div>
+        <div class="curl-block">
+          <span class="prompt">$</span> curl <span class="flag">-s</span> <span class="str">http://localhost:9865/actuator/health</span>
+        </div>
+      </div>
+      <div class="res-panel">
+        <div class="res-label">Response <span class="res-time">27ms</span></div>
+        <div class="res-body">
+<span class="jp">{</span><br>
+&nbsp;&nbsp;<span class="jk">"status"</span><span class="jp">:</span> <span class="jhl js">"UP"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"groups"</span><span class="jp">: [</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="js">"liveness"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="js">"readiness"</span><br>
+&nbsp;&nbsp;<span class="jp">]</span><br>
+<span class="jp">}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Payment by order -->
+  <div class="api-card">
+    <div class="api-row">
+      <div class="req-panel">
+        <div class="req-top">
+          <span class="method method-get">GET</span>
+          <span class="url">http://localhost:9865/v1/payments/order/401</span>
+          <span class="status-badge s200">200 OK</span>
+        </div>
+        <div class="endpoint-desc">Fetch payment record for an order — UPI, SUCCESS status</div>
+        <div class="curl-block">
+          <span class="prompt">$</span> curl <span class="flag">-s</span> <span class="str">http://localhost:9865/v1/payments/order/401</span>
+        </div>
+      </div>
+      <div class="res-panel">
+        <div class="res-label">Response — payment SUCCESS <span class="res-time">19ms</span></div>
+        <div class="res-body">
+<span class="jp">{</span><br>
+&nbsp;&nbsp;<span class="jk">"paymentId"</span><span class="jp">:</span> <span class="jn">401</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"orderId"</span><span class="jp">:</span> <span class="jn">401</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"amount"</span><span class="jp">:</span> <span class="jhl jn">3778.11</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"method"</span><span class="jp">:</span> <span class="jhl js">"UPI"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"status"</span><span class="jp">:</span> <span class="jhl js">"SUCCESS"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"reference"</span><span class="jp">:</span> <span class="jhl js">"PAY1777314094687-1D108C1F"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"failureReason"</span><span class="jp">:</span> <span class="jb">null</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"createdAt"</span><span class="jp">:</span> <span class="js">"2026-04-27T18:21:34.735910Z"</span><br>
+<span class="jp">}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     NOTIFICATION SERVICE
+     ═════════════════════════════════════════════════════════════════════════ -->
+<div class="svc-section" id="notification">
+  <div class="svc-header" style="background:#200a20">
+    <div class="svc-h-dot" style="background:#e879f9"></div>
+    <span class="svc-h-name">notification-service</span>
+    <span class="svc-h-tag tag-nd">Node.js · Express · port 8006</span>
+    <span class="svc-h-port">kubectl port-forward svc/notification-service 8006:8006</span>
+  </div>
+
+  <!-- 1. Health -->
+  <div class="api-card">
+    <div class="api-row">
+      <div class="req-panel">
+        <div class="req-top">
+          <span class="method method-get">GET</span>
+          <span class="url">http://localhost:8006/health</span>
+          <span class="status-badge s200">200 OK</span>
+        </div>
+        <div class="endpoint-desc">Service health check — verifies MySQL notification_db</div>
+        <div class="curl-block">
+          <span class="prompt">$</span> curl <span class="flag">-s</span> <span class="str">http://localhost:8006/health</span>
+        </div>
+      </div>
+      <div class="res-panel">
+        <div class="res-label">Response <span class="res-time">9ms</span></div>
+        <div class="res-body">
+<span class="jp">{</span><br>
+&nbsp;&nbsp;<span class="jk">"status"</span><span class="jp">:</span> <span class="jhl js">"ok"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"service"</span><span class="jp">:</span> <span class="js">"notification-service"</span><br>
+<span class="jp">}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Notifications -->
+  <div class="api-card">
+    <div class="api-row">
+      <div class="req-panel">
+        <div class="req-top">
+          <span class="method method-get">GET</span>
+          <span class="url">http://localhost:8006/v1/notifications?userId=1&amp;limit=1</span>
+          <span class="status-badge s200">200 OK</span>
+        </div>
+        <div class="endpoint-desc">List email notifications for a user — booking confirmation SENT</div>
+        <div class="curl-block">
+          <span class="prompt">$</span> curl <span class="flag">-s</span> <span class="str">"http://localhost:8006/v1/notifications?userId=1&amp;limit=1"</span>
+        </div>
+      </div>
+      <div class="res-panel">
+        <div class="res-label">Response — booking email SENT <span class="res-time">12ms</span></div>
+        <div class="res-body">
+<span class="jp">[{</span><br>
+&nbsp;&nbsp;<span class="jk">"notification_id"</span><span class="jp">:</span> <span class="jn">1</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"user_id"</span><span class="jp">:</span> <span class="jn">1</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"order_id"</span><span class="jp">:</span> <span class="js">"401"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"channel"</span><span class="jp">:</span> <span class="jhl js">"EMAIL"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"subject"</span><span class="jp">:</span> <span class="jhl js">"Booking Confirmed! 🎟️ Order #401 — Live Festival 7"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"status"</span><span class="jp">:</span> <span class="jhl js">"SENT"</span><span class="jp">,</span><br>
+&nbsp;&nbsp;<span class="jk">"created_at"</span><span class="jp">:</span> <span class="js">"2026-04-27T18:21:37.000Z"</span><br>
+<span class="jp">}]</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+</div><!-- /layout -->
+
+<!-- ── FOOTER ─────────────────────────────────────────────────────────────── -->
+<div class="footer">
+  <span>SeatSavvy &nbsp;·&nbsp; namespace: seatsavvy &nbsp;·&nbsp; All calls via kubectl port-forward (Docker driver on macOS)</span>
+  <span>6 / 6 services returning 200 OK &nbsp;·&nbsp; 27 Apr 2026</span>
+</div>
+
+</body>
+</html>

@@ -2,22 +2,35 @@ import { Link } from 'react-router-dom'
 import { MapPin, Calendar, Tag } from 'lucide-react'
 import { Badge } from './ui/Badge'
 import { Button } from './ui/Button'
-import { formatDate, formatPrice, eventGradient, EVENT_STATUS_VARIANT } from '../lib/utils'
+import { formatDate, formatPrice, eventGradient, eventImage, eventTypeBadge, EVENT_STATUS_VARIANT } from '../lib/utils'
+import { cn } from '../lib/utils'
 
 export function EventCard({ event }) {
   const isOnSale = event.status === 'ON_SALE'
+  const imgSrc = eventImage(event.event_type)
 
   return (
     <Link to={`/events/${event.event_id}`} className="group block">
       <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-        {/* Image / gradient placeholder */}
+        {/* Event image with gradient fallback */}
         <div className={`aspect-[16/9] bg-gradient-to-br ${eventGradient(event.event_type)} relative overflow-hidden`}>
-          <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+          {imgSrc && (
+            <img
+              src={imgSrc}
+              alt={event.event_type}
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
+            />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-black/10 group-hover:from-black/50 transition-colors" />
           {/* Event type label */}
           <div className="absolute bottom-3 left-3">
-            <Badge variant="secondary" className="bg-black/40 text-white border-white/20 backdrop-blur-sm">
+            <span className={cn(
+              'inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold backdrop-blur-sm',
+              eventTypeBadge(event.event_type),
+            )}>
               {event.event_type || 'Event'}
-            </Badge>
+            </span>
           </div>
           {/* Status badge */}
           <div className="absolute top-3 right-3">
@@ -25,9 +38,6 @@ export function EventCard({ event }) {
               {event.status?.replace('_', ' ')}
             </Badge>
           </div>
-          {/* Decorative circles */}
-          <div className="absolute -bottom-4 -right-4 h-24 w-24 rounded-full bg-white/10" />
-          <div className="absolute -top-4 -left-4 h-16 w-16 rounded-full bg-white/10" />
         </div>
 
         {/* Body */}
@@ -36,26 +46,26 @@ export function EventCard({ event }) {
             {event.title}
           </h3>
 
-          <div className="space-y-1.5 text-xs text-muted-foreground">
+          <div className="space-y-2 text-sm text-muted-foreground">
             {event.city && (
               <div className="flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+                <MapPin className="h-4 w-4 flex-shrink-0" />
                 <span className="line-clamp-1">{event.city}</span>
               </div>
             )}
             {event.start_time && (
               <div className="flex items-center gap-1.5">
-                <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
+                <Calendar className="h-4 w-4 flex-shrink-0" />
                 <span>{formatDate(event.start_time)}</span>
               </div>
             )}
             {event.base_price != null && (
               <div className="flex items-center gap-1.5">
-                <Tag className="h-3.5 w-3.5 flex-shrink-0" />
-                <span className="font-medium text-foreground">
+                <Tag className="h-4 w-4 flex-shrink-0" />
+                <span className="text-base font-bold text-foreground">
                   {formatPrice(event.base_price)}
                 </span>
-                <span className="text-muted-foreground">onwards</span>
+                <span className="text-sm text-muted-foreground">onwards</span>
               </div>
             )}
           </div>

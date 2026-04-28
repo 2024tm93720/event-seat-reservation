@@ -111,10 +111,16 @@ export function LoginPage() {
             )}
 
             <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">
+                Password
+                {mode === 'login' && (
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">(use your phone number)</span>
+                )}
+              </Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input id="password" type="password" className="pl-9" placeholder="••••••••"
+                <Input id="password" type="password" className="pl-9"
+                  placeholder={mode === 'login' ? 'Your phone number' : '••••••••'}
                   value={form.password} onChange={set('password')} required minLength={4} />
               </div>
             </div>

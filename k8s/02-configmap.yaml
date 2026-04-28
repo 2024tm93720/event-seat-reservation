@@ -1,0 +1,55 @@
+# ── Application configuration ─────────────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: seatsavvy
+data:
+  # Seating
+  HOLD_TTL_MIN: "15"
+  # Inter-service URLs (K8s DNS: <service-name>.<namespace>.svc.cluster.local)
+  ORDER_SVC_URL:    "http://order-service:8965"
+  USER_SVC_URL:     "http://user-service:8001"
+  CATALOG_SVC_URL:  "http://catalog-service:8002"
+  SEATING_SVC_URL:  "http://seating-service:8003"
+  PAYMENT_SVC_URL:  "http://payment-service:9865"
+  NOTIFY_SVC_URL:   "http://notification-service:8006"
+---
+# ── Prometheus scrape config ──────────────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: seatsavvy
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    scrape_configs:
+      - job_name: 'user-service'
+        static_configs:
+          - targets: ['user-service:8001']
+
+      - job_name: 'catalog-service'
+        static_configs:
+          - targets: ['catalog-service:8002']
+
+      - job_name: 'seating-service'
+        static_configs:
+          - targets: ['seating-service:8003']
+
+      - job_name: 'order-service'
+        metrics_path: '/actuator/prometheus'
+        static_configs:
+          - targets: ['order-service:8965']
+
+      - job_name: 'payment-service'
+        metrics_path: '/actuator/prometheus'
+        static_configs:
+          - targets: ['payment-service:9865']
+
+      - job_name: 'notification-service'
+        static_configs:
+          - targets: ['notification-service:8006']

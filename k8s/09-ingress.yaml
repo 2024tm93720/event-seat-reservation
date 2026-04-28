@@ -1,0 +1,29 @@
+# ── Nginx Ingress ─────────────────────────────────────────────────────────────
+# Enable with: minikube addons enable ingress
+#
+# All external traffic → frontend (nginx inside handles /api/* proxying
+# to the backend ClusterIP services using K8s DNS).
+# Monitoring UIs are exposed separately via NodePort (see 08-monitoring.yaml).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: seatsavvy-ingress
+  namespace: seatsavvy
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: seatsavvy.local          # add to /etc/hosts: <minikube-ip> seatsavvy.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 3001

@@ -80,7 +80,7 @@ export function BookingFlow({ event, selectedSeats, userId, onClose, onSuccess }
           } else if (['PAYMENT_FAILED', 'CANCELLED', 'REJECTED'].includes(updated.orderStatus)) {
             clearInterval(pollRef.current)
             await releaseSeats(tempId).catch(() => {})
-            setError(`Payment ${updated.orderStatus.replace('_', ' ').toLowerCase()}. Please try again.`)
+            setError('Payment failed. Please try again.')
             setStep('review')
           }
         } catch {
