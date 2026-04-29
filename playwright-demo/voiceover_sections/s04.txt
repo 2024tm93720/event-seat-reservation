@@ -1,0 +1,1 @@
+Selecting an event opens the interactive seat map, powered by the Seating Service — built with Node.js, Express, and mysql2. Clicking a seat sends a hold request, transitioning its status from AVAILABLE to HELD with a fifteen-minute time-to-live.

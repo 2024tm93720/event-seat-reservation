@@ -1,0 +1,1 @@
+Let's register a new user. The User Service — also Python FastAPI with SQLAlchemy — receives the POST request, hashes the password with BCrypt, and persists the user in its dedicated MySQL database. A 201 Created response confirms the registration, and the user appears immediately in the navigation bar.

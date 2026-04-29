@@ -1,0 +1,1 @@
+The admin panel provides a live overview across all services. SeatSavvy: six microservices, six databases, RabbitMQ, Prometheus, Grafana, and Kubernetes — a complete, production-grade ticketing platform. Thank you.

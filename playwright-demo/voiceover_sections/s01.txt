@@ -1,0 +1,1 @@
+Welcome to SeatSavvy — a production-ready event ticketing platform built with six polyglot microservices, all running on Kubernetes. You can see all sixteen pods running healthy on Minikube. The platform deploys through nine focused YAML manifests — covering namespaces, secrets, databases, application services, monitoring, and ingress — applied in order by a single deploy script.

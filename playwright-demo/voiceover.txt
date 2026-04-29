@@ -1,0 +1,25 @@
+Welcome to SeatSavvy — a production-ready event ticketing platform built with six polyglot microservices, all running on Kubernetes.
+
+All sixteen pods are running healthy on Minikube. The platform deploys through nine focused Kubernetes YAML manifests — covering namespaces, secrets, databases, application services, monitoring, and ingress — applied in order by a single deploy script.
+
+The frontend is a React 18 application powered by Vite and Tailwind CSS, calling the Catalog Service — a Python FastAPI app — which serves event data from a MySQL 8.0 database. TanStack Query manages client-side caching and re-validation.
+
+Let's register a new user. The User Service — also Python FastAPI with SQLAlchemy — receives the POST request, validates the data, and stores the password as a BCrypt hash in its dedicated MySQL database. The user appears immediately in the navigation bar confirming a 201 Created response.
+
+Selecting an event opens the interactive seat map, powered by the Seating Service — built with Node.js, Express, and mysql2. Clicking an available seat sends a hold request, transitioning its status from AVAILABLE to HELD with a fifteen-minute time-to-live.
+
+Now the full booking flow — the most complex part of the platform. The Order Service, built with Java and Spring Boot, creates a reserved order and writes an event to the transactional outbox table. The outbox scheduler publishes ORDER_PLACED to RabbitMQ. The Payment Service — also Spring Boot — consumes this message, processes the payment through a simulated gateway, and publishes PAYMENT_SUCCESS back to the queue. The Order Service then confirms the booking and issues the ticket. The seat transitions to allocated.
+
+My Orders shows the confirmed booking pulled from PostgreSQL 16 via Spring Data JPA and HikariCP connection pooling.
+
+The Notification Service — Node.js with amqplib — consumed the ORDER_CONFIRMED event from RabbitMQ and sent a booking confirmation email, now visible in the notifications tab.
+
+Behind the scenes, six isolated databases persist all platform data: MySQL 8.0 for users, catalog, seating, and notifications — and PostgreSQL 16 for orders and payments.
+
+Every HTTP request carries an X-Correlation-Id header. Spring Boot services use Mapped Diagnostic Context in a Once-Per-Request filter to attach the ID to every log line, making it possible to trace a single booking end-to-end across all six services.
+
+All services export Prometheus metrics — Micrometer for Java, prom-client for Node.js, and prometheus-client for Python. Here we see live PromQL queries for order and payment counters.
+
+Every log line is structured JSON — timestamp, level, service name, and correlation ID — streamed directly from kubectl.
+
+SeatSavvy: six microservices, six databases, RabbitMQ, Prometheus, Grafana, and Kubernetes. A complete, production-grade ticketing platform. Thank you.

@@ -1,0 +1,1 @@
+All six services export Prometheus metrics. Micrometer for Java, prom-client for Node.js, and prometheus-client for Python. Here we see live PromQL queries — orders placed total, payments processed with success and failed status labels, and seat reservation failure counters.
