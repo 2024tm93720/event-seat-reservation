@@ -1,0 +1,1 @@
+Every request carries an X-Correlation-Id header. Spring Boot services attach it to every log line using Mapped Diagnostic Context in a Once-Per-Request filter. Here you can see the same ID flowing through all six services — making it possible to trace a booking end-to-end.

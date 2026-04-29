@@ -1,0 +1,1 @@
+Six isolated databases persist all platform data. MySQL 8.0 handles users, catalog, seating, and notifications. PostgreSQL 16 handles orders and payments — 407 total orders, over 8 lakh rupees in revenue, and 702 tickets issued to date.

@@ -1,0 +1,1 @@
+Every log line is structured JSON — timestamp, level, service name, and correlation ID — streamed directly from kubectl. The order service and payment service logs show the same correlation ID for the booking we just made.
